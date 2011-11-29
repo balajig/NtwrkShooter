@@ -1,3 +1,5 @@
+#ifndef NT_H
+#define NT_H
 /* 
  *  Description: Network Trouble shooter 
  *
@@ -29,3 +31,5 @@ struct if_info {
 	int		oper_state;   /*IFF_RUNNING*/
 	int 		flags;
 };
+
+#endif
