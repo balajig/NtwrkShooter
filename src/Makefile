@@ -1,8 +1,8 @@
-OBJS = if.o ntwkr_main.o
-BIN = ntwkr
+OBJS = if.o ntwrk_main.o
+BIN = nshooter
 INCLUDES =../lib 
 CFLAGS ?= -g -Wall -I$(INCLUDES) 
-LIBS= ../lib/libutil.a -lpthread -lreadline 
+LIBS= ../lib/libutil.a
 
 all : $(BIN)
 

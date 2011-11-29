@@ -1,0 +1,24 @@
+	for_each_infterace_check_admin_and_opera_state  ()
+		if (all_links_down_ternimate the program)
+
+  	
+	ping_default_gateway (); /*XXX:in future we have to consider all the route entries not only default gateway*/
+	
+	terminate_if_the_ping_to_default_gate_way_fails ();
+
+	/*By the code reach here link is up and default gateway is up*/	
+
+	read_resolve.conf_for_primary_and_secondary_dns_server();
+	
+	terminate_if_no_dns_server_configured ();
+
+	ping_dns_servers_to_check_the_server_is_up ();
+
+	terminate_if_ping_to_dns_server_configured_fails ();
+
+	/*By the code reach here link is up and default gateway is up, DNS server is up, now we need to find the DNS is getting resolved or not*/	
+
+	send_a_dns_qeury_to_five_to_ten_top_websites_to_check_dns_is_getting_resolved_or_not ();
+
+	terminate_if_not_able_to_resolve_the_program ();
+

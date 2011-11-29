@@ -8,29 +8,10 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <linux/if.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <linux/sockios.h>
-#include "list.h"
+#include "nt.h"
 
 #define _PATH_PROCNET_DEV "/proc/net/dev"
-struct if_info {
-	struct list_head nxt_if;
-	char		if_name[IFNAMSIZ];
-	unsigned int	ipv4_address;  /*XXX: Currently our focus is only on IPV4 address*/
-	int		sock_fd;
-	int		if_idx;
-	int		admin_state;	/*IFF_UP or IFF_DOWN*/
-	int		oper_state;   /*IFF_RUNNING*/
-	unsigned int    ipv4_netmask;
-	int 		flags;
 
-};
 
 struct list_head  if_hd;
 
@@ -167,10 +148,6 @@ static int procnetdev_version(char *buf)
     return 1;
 }
 
-
-
-
-
 int if_readlist(void)
 {
     int err = if_readlist_proc(NULL);
@@ -178,10 +155,6 @@ int if_readlist(void)
             err = if_readconf();
     return err;
 }
-
-
-
-
 
 int fetch_and_update_if_info (struct if_info *ife)
 {
