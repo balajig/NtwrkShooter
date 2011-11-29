@@ -32,4 +32,43 @@ struct if_info {
 	int 		flags;
 };
 
-#endif
+
+/**
+ *	struct prefix - prefix structure
+ *	@family:  Denotes whether its IPv4 or Ipv6
+ *	@prefixlen: Denotes the subnet mask
+ *	@prefix: Denotes the IPv4 Prefix 
+ *	@prefix6: Denotes the IPv6 Prefix
+ */
+struct prefix {   
+	unsigned char family; 
+	unsigned char prefixlen;
+	union
+	{
+	  struct in_addr prefix4;
+    #ifdef HAVE_IPV6
+	  struct in6_addr prefix6;
+    #endif /* HAVE_IPV6 */
+	} u;
+};
+
+
+/**
+ *	struct rt_info - route information structure
+ * 	@p: pointer to struct prefix
+ * 	@distance: admin distance for the route
+ * 	@flags: Denotes the flag for the route
+ * 	@nexthop: nexthop address
+ *	@ifname: interface name
+ *      @rt_list: list of all route information 
+ */
+struct rt_info {
+	struct prefix *p;
+	unsigned char distance;	
+	unsigned char flags;
+	struct in_addr nexthop;
+	char *ifname;
+        struct list_head  rt_list; //FIXME - Need to think about a better way probably a hash method to lookup instead of lists. 
+};
+
+#endif  /* NT_H */
