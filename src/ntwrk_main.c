@@ -10,6 +10,8 @@
 
 #include "nt.h"
 
+#define VERSION  "0.1"
+
 enum DEBUG {
 	DEBUG_DISABLED = 0,
 	DEBUG_ENABLED
@@ -17,6 +19,12 @@ enum DEBUG {
 
 static int nts_debug = DEBUG_DISABLED;
 
+
+void show_version (void)
+{
+	fprintf (stdout, "Network Trouble Shooter %s\n", VERSION);
+	fflush  (stdout);
+}
 
 int main (int argc, char **argv)
 {
@@ -35,4 +43,6 @@ int main (int argc, char **argv)
 				return 0;
 		}
 	}
+
+	show_version ();
 }
