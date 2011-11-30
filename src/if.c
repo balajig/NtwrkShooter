@@ -198,16 +198,16 @@ int fetch_and_update_if_info (struct if_info *ife)
 
 int read_interfaces (void)
 {
-        struct if_info    *p = NULL;
-        struct list_head  *head = &if_hd;
+	struct if_info    *p = NULL;
+	struct list_head  *head = &if_hd;
 
 	if (if_readlist () < 0)
 		return -1;
 
-        list_for_each_entry (p, head, nxt_if) {
+	list_for_each_entry (p, head, nxt_if) {
 		if (fetch_and_update_if_info (p) < 0)
 			return -1;
-        }
+	}
 
 	return 0;
 }
@@ -221,7 +221,7 @@ struct if_info * get_next_if_info (struct if_info *p)
 		/*if p is NULL , get the first entry in the list*/
 		nxt = &if_hd;
 		nxtif = list_first_entry (nxt, struct if_info, nxt_if);
-		
+
 	} else {
 		nxt = &p->nxt_if;
 		if (nxt->next != &if_hd)
@@ -235,28 +235,28 @@ struct if_info * get_next_if_info (struct if_info *p)
 void display_interface_info (void)
 {
 
-        struct if_info    *p = NULL;
-        struct list_head  *head = &if_hd;
+	struct if_info    *p = NULL;
+	struct list_head  *head = &if_hd;
 
 	fprintf (stdout, "\nIf_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
 	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
 
-        list_for_each_entry (p, head, nxt_if) {
+	list_for_each_entry (p, head, nxt_if) {
 		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
-		        (p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
-        }
+				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+	}
 }
 
 void display_interface_info_get_next_test (void)
 {
 
-        struct if_info    *p = NULL;
+	struct if_info    *p = NULL;
 
 	fprintf (stdout, "If_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
 	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
 
-        while ((p = get_next_if_info (p))) {
+	while ((p = get_next_if_info (p))) {
 		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
-		        (p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
-        }
+				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+	}
 }
