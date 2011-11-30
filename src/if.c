@@ -9,11 +9,12 @@
  */
 
 #include "nt.h"
+#include <sys/ioctl.h>
 
 #define _PATH_PROCNET_DEV "/proc/net/dev"
 
 
-struct list_head  if_hd;
+LIST_HEAD(if_hd);
 
 static struct if_info *add_if_info(char *name)
 {
@@ -139,21 +140,12 @@ static int if_readlist_proc(char *target)
 	return err;
 }
 
-static int procnetdev_version(char *buf)
-{
-    if (strstr(buf, "compressed"))
-        return 3;
-    if (strstr(buf, "bytes"))
-        return 2;
-    return 1;
-}
-
 int if_readlist(void)
 {
-    int err = if_readlist_proc(NULL);
-    if (!err)
-            err = if_readconf();
-    return err;
+	int err = if_readlist_proc (NULL);
+	if (err < 0)
+		err = if_readconf();
+	return err;
 }
 
 int fetch_and_update_if_info (struct if_info *ife)
@@ -161,8 +153,6 @@ int fetch_and_update_if_info (struct if_info *ife)
 	struct ifreq ifr;
 	char *ifname = ife->if_name; 
 	int  fd = socket(AF_INET, SOCK_DGRAM, 0);
-	int rval = -1;
-	char *errmsg = 0;
 
 	if (fd < 0)
 		return (-1);
@@ -179,25 +169,21 @@ int fetch_and_update_if_info (struct if_info *ife)
 			ife->ipv4_netmask = ntohl(sin->sin_addr.s_addr);
 		}
 
-	} else
-		goto error;
-	
+	} 	
 
 	if (ioctl(fd, SIOCGIFINDEX, (char *)&ifr) == 0)
 		ife->if_idx = ifr.ifr_ifindex;
-	else
-		goto error;
 
 	if (ioctl(fd, SIOCGIFFLAGS, &ifr) == 0)  {
-		ife->admin_state = ife->flags & IFF_UP;
-		ife->oper_state  = ife->flags & IFF_RUNNING;
-	} else
-		goto error;
+		ife->admin_state = ifr.ifr_flags & IFF_UP;
+		ife->oper_state  = ifr.ifr_flags & IFF_RUNNING;
+	} 
 
 	close(fd);
 
 	return 0;
-error:
+#if 0
+
 	if (errno == ENODEV) { 
 	    errmsg = ("Device not found"); 
 	} else { 
@@ -206,11 +192,71 @@ error:
 
   	fprintf(stderr, ("%s: error fetching interface information: %s\n"),
 		ife->if_name, errmsg);
-
+#endif
 	return -1;
 }
 
-int read_interfaces()
+int read_interfaces (void)
 {
+        struct if_info    *p = NULL;
+        struct list_head  *head = &if_hd;
+
+	if (if_readlist () < 0)
+		return -1;
+
+        list_for_each_entry (p, head, nxt_if) {
+		if (fetch_and_update_if_info (p) < 0)
+			return -1;
+        }
+
 	return 0;
+}
+
+struct if_info * get_next_if_info (struct if_info *p)
+{
+	struct list_head *nxt = NULL;
+	struct if_info *nxtif = NULL;
+
+	if (!p) {
+		/*if p is NULL , get the first entry in the list*/
+		nxt = &if_hd;
+		nxtif = list_first_entry (nxt, struct if_info, nxt_if);
+		
+	} else {
+		nxt = &p->nxt_if;
+		if (nxt->next != &if_hd)
+			nxtif = list_entry (nxt->next, struct if_info, nxt_if);
+	}
+
+	return nxtif;
+}
+
+/*Following routies just to verify the database*/
+void display_interface_info (void)
+{
+
+        struct if_info    *p = NULL;
+        struct list_head  *head = &if_hd;
+
+	fprintf (stdout, "\nIf_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
+	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
+
+        list_for_each_entry (p, head, nxt_if) {
+		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		        (p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+        }
+}
+
+void display_interface_info_get_next_test (void)
+{
+
+        struct if_info    *p = NULL;
+
+	fprintf (stdout, "If_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
+	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
+
+        while ((p = get_next_if_info (p))) {
+		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		        (p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+        }
 }

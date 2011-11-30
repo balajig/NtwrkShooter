@@ -20,9 +20,20 @@ enum DEBUG {
 static int nts_debug = DEBUG_DISABLED;
 
 
+
+void display_interface_info (void);
+int  read_interfaces (void);
+
+void show_license (void)
+{
+	fprintf (stdout, "This is free software: you are free to change and redistribute it.\n");
+	fprintf	(stdout, "There is NO WARRANTY, to the extent permitted by law.\n");	
+}
+
 void show_version (void)
 {
-	fprintf (stdout, "Network Trouble Shooter %s\n", VERSION);
+	fprintf (stdout, "Network Trouble Shooter version %s\n", VERSION);
+	show_license ();
 	fflush  (stdout);
 }
 
@@ -45,4 +56,17 @@ int main (int argc, char **argv)
 	}
 
 	show_version ();
+
+	if (read_interfaces () < 0) {
+		fprintf (stderr, "Unable to read the interface details\n");
+		exit (1);
+	}
+	
+	/*XXX:just for testing purpose now*/
+
+	display_interface_info ();
+
+	display_interface_info_get_next_test ();
+
+	return 0;
 }
