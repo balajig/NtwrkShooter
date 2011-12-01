@@ -19,20 +19,15 @@ enum DEBUG {
 
 static int nts_debug = DEBUG_DISABLED;
 
-
-
-void display_interface_info (void);
-int  read_interfaces (void);
-
 void show_license (void)
 {
 	fprintf (stdout, "This is free software: you are free to change and redistribute it.\n");
-	fprintf	(stdout, "There is NO WARRANTY, to the extent permitted by law.\n");	
+	fprintf	(stdout, "There is NO WARRANTY, to the extent permitted by law.\n\n");	
 }
 
 void show_version (void)
 {
-	fprintf (stdout, "Network Trouble Shooter version %s\n", VERSION);
+	fprintf (stdout, "Network Trouble Shooter (NTS) version %s\n", VERSION);
 	show_license ();
 	fflush  (stdout);
 }
@@ -40,6 +35,7 @@ void show_version (void)
 int main (int argc, char **argv)
 {
 	int options = 0;
+	struct if_info    *p = NULL;
 
 	/*TODO: Need to figure out the command line options*/
 
@@ -61,12 +57,22 @@ int main (int argc, char **argv)
 		fprintf (stderr, "Unable to read the interface details\n");
 		exit (1);
 	}
+
+	while ((p = get_next_if_info (p))) {
+		if (!(p->admin_state & IFF_UP) &&  !(p->oper_state & IFF_RUNNING)) {
+			if (make_if_up (p)  < 0) {
+				/*Unable to make the interface up*/
+				/*Del this interface from the list*/
+				list_del (&p->nxt_if);
+				fprintf (stderr, "\033[31mNTS: Unable to bring the Interface \"%s\" UP \033[0m\n", p->if_name);
+			}
+		}
+	}
 	
-	/*XXX:just for testing purpose now*/
-
-	display_interface_info ();
-
-	display_interface_info_get_next_test ();
+	if (!get_next_if_info (NULL)) {
+		fprintf (stderr, "\033[31mNTS: All Interface on the system was DOWN \033[0m\n");
+		return -1;
+	}
 
 	return 0;
 }

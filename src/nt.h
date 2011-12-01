@@ -74,4 +74,10 @@ struct rt_info {
         struct list_head  rt_list; //FIXME - Need to think about a better way probably a hash method to lookup instead of lists. 
 };
 
+
+struct if_info * get_next_if_info (struct if_info *p);
+int make_if_up (struct if_info *p);
+void display_interface_info (void);
+int  read_interfaces (void);
+
 #endif  /* NT_H */

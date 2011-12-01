@@ -87,9 +87,11 @@ static int if_readconf(void)
 	}
 
 	ifr = ifc.ifc_req;
-	for (n = 0; n < ifc.ifc_len; n += sizeof(struct ifreq)) {
+	for (n = 0; n < ifc.ifc_len; n += sizeof(struct ifreq), ifr++) {
+		/*Ignore loopback interface*/
+		if (!strncmp (ifr->ifr_name, "lo", strlen ("lo")))
+			continue;
 		add_if_info(ifr->ifr_name);
-		ifr++;
 	}
 	err = 0;
 
@@ -120,12 +122,13 @@ static int if_readlist_proc(char *target)
 	fgets(buf, sizeof buf, fh); /* eat line */
 	fgets(buf, sizeof buf, fh);
 
-	//procnetdev_vsn = procnetdev_version(buf);
-
 	err = 0;
 	while (fgets(buf, sizeof buf, fh)) {
 		char *s, name[IFNAMSIZ];
 		s = get_name(name, buf);
+		/*Ignore loopback interface*/
+		if (!strncmp (name, "lo", strlen ("lo")))
+			continue;
 		ife = add_if_info(name);
 		if (target && !strcmp(target,name))
 			break;
@@ -140,7 +143,7 @@ static int if_readlist_proc(char *target)
 	return err;
 }
 
-int if_readlist(void)
+static int if_readlist(void)
 {
 	int err = if_readlist_proc (NULL);
 	if (err < 0)
@@ -148,7 +151,7 @@ int if_readlist(void)
 	return err;
 }
 
-int fetch_and_update_if_info (struct if_info *ife)
+static int fetch_and_update_if_info (struct if_info *ife)
 {
 	struct ifreq ifr;
 	char *ifname = ife->if_name; 
@@ -231,7 +234,41 @@ struct if_info * get_next_if_info (struct if_info *p)
 	return nxtif;
 }
 
-/*Following routies just to verify the database*/
+int make_if_up (struct if_info *p)
+{
+	struct ifreq ifr;
+	int  fd = -1;
+
+	/*MUST be ROOT to make If UP*/
+	if (!getuid ()) {
+		return -1;
+	}
+	
+	fd =  socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0)
+		return (-1);
+
+	memset (&ifr, 0, sizeof(ifr));
+
+	strncpy(ifr.ifr_name, p->if_name, sizeof(ifr.ifr_name));
+
+	ifr.ifr_flags |= IFF_UP;
+	ifr.ifr_flags |= IFF_RUNNING;
+
+	/*make the interface UP and Running*/
+	if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0)
+		return -1;
+
+	/*Read and update the interface states*/
+	if (ioctl(fd, SIOCGIFFLAGS, &ifr) == 0)  {
+		p->admin_state = ifr.ifr_flags & IFF_UP;
+		p->oper_state  = ifr.ifr_flags & IFF_RUNNING;
+	} 
+
+	return 0;
+}
+
+/*Following routines just to verify the database*/
 void display_interface_info (void)
 {
 
@@ -242,20 +279,6 @@ void display_interface_info (void)
 	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
 
 	list_for_each_entry (p, head, nxt_if) {
-		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
-				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
-	}
-}
-
-void display_interface_info_get_next_test (void)
-{
-
-	struct if_info    *p = NULL;
-
-	fprintf (stdout, "If_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
-	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
-
-	while ((p = get_next_if_info (p))) {
 		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}
