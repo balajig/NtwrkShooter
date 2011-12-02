@@ -12,12 +12,6 @@
 
 #define VERSION  "0.1"
 
-enum DEBUG {
-	DEBUG_DISABLED = 0,
-	DEBUG_ENABLED
-};
-
-static int nts_debug = DEBUG_DISABLED;
 
 void show_license (void)
 {
@@ -32,18 +26,34 @@ void show_version (void)
 	fflush  (stdout);
 }
 
+void show_usage (void)
+{
+	fprintf (stdout, "Usage: nshooter [OPTION]\n");
+	fprintf (stdout, "Troubleshoots the network and reports problem\n");
+	fprintf (stdout, "Options:\n");
+	fprintf (stdout, "-d,                   Enables debugging mode\n");
+	fprintf (stdout, "-h,                   Displays help message\n");
+}
+
 int main (int argc, char **argv)
 {
 	int options = 0;
 	struct if_info    *p = NULL;
 
+
+	show_version ();
+
 	/*TODO: Need to figure out the command line options*/
 
-	while ((options = getopt(argc, argv, "d")) != -1) {
+	while ((options = getopt(argc, argv, "dh")) != -1) {
 		switch (options) {
 			case 'd':
-				nts_debug = DEBUG_ENABLED;
-				fprintf (stderr, "Debugging Mode enabled\n");
+				fprintf (stderr, "NTS: Debugging Mode enabled\n\n");
+				set_debug_enable ();
+				break;
+			case 'h':
+				show_usage ();
+				exit (1);
 				break;
 			default: 
 				fprintf (stderr, "Invalid Option\n");
@@ -51,20 +61,19 @@ int main (int argc, char **argv)
 		}
 	}
 
-	show_version ();
-
 	if (read_interfaces () < 0) {
 		fprintf (stderr, "Unable to read the interface details\n");
 		exit (1);
 	}
 
 	while ((p = get_next_if_info (p))) {
-		if (!(p->admin_state & IFF_UP) &&  !(p->oper_state & IFF_RUNNING)) {
+		if (!p->admin_state &&  !p->oper_state) {
 			if (make_if_up (p)  < 0) {
 				/*Unable to make the interface up*/
 				/*Del this interface from the list*/
 				list_del (&p->nxt_if);
-				fprintf (stderr, "\033[31mNTS: Unable to bring the Interface \"%s\" UP \033[0m\n", p->if_name);
+				fprintf (stderr, "\033[31mNTS : Unable to bring the Interface \"%s\" UP \033[0m\n", 
+					 p->if_name);
 			}
 		}
 	}

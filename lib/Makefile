@@ -1,5 +1,5 @@
 LIB = libutil.a
-OBJS = log.o 
+OBJS = log.o debug.o
 CFLAGS = -g -Wall
 
 all : $(LIB)

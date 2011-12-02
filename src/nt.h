@@ -79,5 +79,7 @@ struct if_info * get_next_if_info (struct if_info *p);
 int make_if_up (struct if_info *p);
 void display_interface_info (void);
 int  read_interfaces (void);
+int nts_debug (char *fmt, ...);
+void set_debug_enable (void);
 
 #endif  /* NT_H */

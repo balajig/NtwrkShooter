@@ -127,8 +127,11 @@ static int if_readlist_proc(char *target)
 		char *s, name[IFNAMSIZ];
 		s = get_name(name, buf);
 		/*Ignore loopback interface*/
-		if (!strncmp (name, "lo", strlen ("lo")))
+		if (!strncmp (name, "lo", strlen ("lo"))) {
+			nts_debug ("loopback interface \"%s\" ignored", name);
 			continue;
+		}
+		nts_debug ("\"%s\" interface added successfully to IF table", name);
 		ife = add_if_info(name);
 		if (target && !strcmp(target,name))
 			break;
@@ -167,12 +170,17 @@ static int fetch_and_update_if_info (struct if_info *ife)
 		struct sockaddr_in *sin = (struct sockaddr_in *)&ifr.ifr_addr;
 		ife->ipv4_address = ntohl(sin->sin_addr.s_addr);
 
+		nts_debug ("\"%s\" interface IP address :  \"%x\"", ifname, ife->ipv4_address);
+
 		if (ioctl(fd, SIOCGIFNETMASK, &ifr) == 0) {
 			struct sockaddr_in *sin = (struct sockaddr_in *)&ifr.ifr_addr;
 			ife->ipv4_netmask = ntohl(sin->sin_addr.s_addr);
-		}
+			nts_debug ("\"%s\" Interface IP Netmask :  \"%x\"", ifname, ife->ipv4_netmask);
+		} else
+			nts_debug ("\033[31mIP Netmask not configured for \"%s\"\033[0m", ifname);
 
-	} 	
+	} else 	
+		nts_debug ("\033[31mIP address not configured for \"%s\"\033[0m", ifname);
 
 	if (ioctl(fd, SIOCGIFINDEX, (char *)&ifr) == 0)
 		ife->if_idx = ifr.ifr_ifindex;
@@ -181,6 +189,9 @@ static int fetch_and_update_if_info (struct if_info *ife)
 		ife->admin_state = ifr.ifr_flags & IFF_UP;
 		ife->oper_state  = ifr.ifr_flags & IFF_RUNNING;
 	} 
+
+	if (!ife->admin_state && !ife->oper_state)
+		nts_debug ("\033[31m\"%s\" link is DOWN \033[0m", ifname);
 
 	close(fd);
 
