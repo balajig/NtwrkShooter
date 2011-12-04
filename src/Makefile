@@ -1,4 +1,4 @@
-OBJS = if.o ntwrk_main.o
+OBJS = if.o ntwrk_main.o rt_info_nl.o
 BIN = nshooter
 INCLUDES =../lib 
 CFLAGS ?= -g -Wall -I$(INCLUDES) 

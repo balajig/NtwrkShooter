@@ -83,5 +83,7 @@ int main (int argc, char **argv)
 		return -1;
 	}
 
+	rtnl_init();
+
 	return 0;
 }
