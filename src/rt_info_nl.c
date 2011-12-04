@@ -28,8 +28,10 @@ static int rt_sock_create(void)
 #ifdef HAVE_IPV6
 	groups |= RTMGRP_IPV6_ROUTE | RTMGRP_IPV4_IFADDR;
 #endif
-	if(sock < 0) 
+	if(sock < 0) {
 	      fprintf (stderr, "Can't open socket\n");
+	      exit(0);
+	}
 	
 	memset (&snl, 0, sizeof snl);
 	snl.nl_family = AF_NETLINK;
@@ -175,7 +177,7 @@ static int flush_rt_table(struct nlmsghdr *h)
 	metric = *(int *) RTA_DATA(tb[RTA_PRIORITY]);
 
       if (rtm->rtm_family == AF_INET)
-	{
+      {
 	  struct prefix p;
 	  p.family = AF_INET;
 	  memcpy (&p.u.prefix4, dest, 4);
@@ -185,10 +187,10 @@ static int flush_rt_table(struct nlmsghdr *h)
 	  * Store the info into the local structure
 	  */
 	 populate_rt_info(&p, gate, src, index, metric);
-	}
+      }
 #ifdef HAVE_IPV6
       if (rtm->rtm_family == AF_INET6)
-	{
+      {
 	  struct prefix p;
 	  p.family = AF_INET6;
 	  memcpy (&p.u.prefix, dest, 16);
@@ -197,7 +199,7 @@ static int flush_rt_table(struct nlmsghdr *h)
          /*
 	  * Store the info into the local structure
 	  */
-	}
+      }
 #endif /* HAVE_IPV6 */
 
       return 0;
