@@ -40,6 +40,10 @@ int main (int argc, char **argv)
 	int options = 0;
 	struct if_info    *p = NULL;
 
+	set_program_name (argv[0]);
+	setlocale (LC_ALL, "");
+	bindtextdomain (PACKAGE, LOCALEDIR);
+	textdomain (PACKAGE);
 
 	show_version ();
 
@@ -72,14 +76,14 @@ int main (int argc, char **argv)
 				/*Unable to make the interface up*/
 				/*Del this interface from the list*/
 				list_del (&p->nxt_if);
-				fprintf (stderr, "\033[31mNTS : Unable to bring the Interface \"%s\" UP \033[0m\n", 
+				fprintf (stderr, "\033[32mNTS :\033[0m\033[31m Unable to bring the Interface \"%s\" UP \033[0m\n", 
 					 p->if_name);
 			}
 		}
 	}
 	
 	if (!get_next_if_info (NULL)) {
-		fprintf (stderr, "\033[31mNTS: All Interface on the system was DOWN \033[0m\n");
+		fprintf (stderr, "\033[32mNTS : \033[0m\033[31mAll Interface on the system was DOWN \033[0m\n");
 		return -1;
 	}
 

@@ -28,7 +28,7 @@ int nts_debug (char *fmt , ...)
 {
 	if (nts_dbg) {
 		va_list v_args;
-		fprintf (stdout, "\033[31mNTS : \033[0m");
+		fprintf (stdout, "\033[32mNTS : \033[0m");
 		va_start (v_args, fmt);
 		vprintf(fmt, v_args);
 		va_end(v_args);

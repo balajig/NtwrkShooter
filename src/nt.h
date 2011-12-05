@@ -16,12 +16,20 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <locale.h>
 #include <sys/socket.h>
 #include <linux/if.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <linux/sockios.h>
+#include <libintl.h>
 #include "list.h"
+#include "progname.h"
+
+#define PACKAGE "NetworkManager"
+
+/*XXX: It should be auto generated one*/
+#define LOCALEDIR "/usr/local/share/locale"
 
 
 enum GET_IF {
