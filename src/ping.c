@@ -78,13 +78,8 @@ struct icmp_filter {
 #define MAX_HOSTNAMELEN	NI_MAXHOST
 
 
-static int ts_type;
-static int nroute = 0;
-static __u32 route[10];
 
 
-
-struct sockaddr_in whereto;	/* who to ping */
 int optlen = 0;
 int settos = 0;			/* Set TOS, Precendence or other QOS options */
 int icmp_sock;			/* socket file descriptor */
@@ -96,10 +91,8 @@ static int broadcast_pings = 0;
 static char *pr_addr(__u32);
 static void pr_options(unsigned char * cp, int hlen);
 static void pr_iph(struct iphdr *ip);
-static void usage(void) __attribute__((noreturn));
 static u_short in_cksum(const u_short *addr, int len, u_short salt);
 static void pr_icmph(__u8 type, __u8 code, __u32 info, struct icmphdr *icp);
-static int parsetos(char *str);
 
 static struct {
 	struct cmsghdr cm;
@@ -112,276 +105,34 @@ struct sockaddr_in source;
 char *device;
 int pmtudisc = -1;
 
-#if 0
+struct sockaddr_in whereto;
+
 int
-main(int argc, char **argv)
+ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info *device)
 {
-	struct hostent *hp;
-	int ch, hold, packlen;
+	int hold, packlen;
 	int socket_errno;
 	u_char *packet;
-	char *target, hnamebuf[MAX_HOSTNAMELEN];
-	char rspace[3 + 4 * NROUTES + 1];	/* record route space */
 
 	icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	socket_errno = errno;
 
-	uid = getuid();
-	if (setuid(uid)) {
-		perror("ping: setuid");
-		exit(-1);
-	}
-
 	source.sin_family = AF_INET;
-
-	preload = 1;
-	while ((ch = getopt(argc, argv, COMMON_OPTSTR "bRT:")) != EOF) {
-		switch(ch) {
-		case 'b':
-			broadcast_pings = 1;
-			break;
-		case 'Q':
-			settos = parsetos(optarg);
-			if (settos &&
-			    (setsockopt(icmp_sock, IPPROTO_IP, IP_TOS,
-					(char *)&settos, sizeof(int)) < 0)) {
-				perror("ping: error setting QOS sockopts");
-				exit(2);
-			}
-			break;
-		case 'R':
-			if (options & F_TIMESTAMP) {
-				fprintf(stderr, "Only one of -T or -R may be used\n");
-				exit(2);
-			}
-			options |= F_RROUTE;
-			break;
-		case 'T':
-			if (options & F_RROUTE) {
-				fprintf(stderr, "Only one of -T or -R may be used\n");
-				exit(2);
-			}
-			options |= F_TIMESTAMP;
-			if (strcmp(optarg, "tsonly") == 0)
-				ts_type = IPOPT_TS_TSONLY;
-			else if (strcmp(optarg, "tsandaddr") == 0)
-				ts_type = IPOPT_TS_TSANDADDR;
-			else if (strcmp(optarg, "tsprespec") == 0)
-				ts_type = IPOPT_TS_PRESPEC;
-			else {
-				fprintf(stderr, "Invalid timestamp type\n");
-				exit(2);
-			}
-			break;
-		case 'I':
-		{
-#if 0
-			char dummy;
-			int i1, i2, i3, i4;
-
-			if (sscanf(optarg, "%u.%u.%u.%u%c",
-				   &i1, &i2, &i3, &i4, &dummy) == 4) {
-				__u8 *ptr;
-				ptr = (__u8*)&source.sin_addr;
-				ptr[0] = i1;
-				ptr[1] = i2;
-				ptr[2] = i3;
-				ptr[3] = i4;
-				options |= F_STRICTSOURCE;
-			} else {
-				device = optarg;
-			}
-#else
-			if (inet_pton(AF_INET, optarg, &source.sin_addr) > 0)
-				options |= F_STRICTSOURCE;
-			else
-				device = optarg;
-#endif
-			break;
-		}
-		case 'M':
-			if (strcmp(optarg, "do") == 0)
-				pmtudisc = IP_PMTUDISC_DO;
-			else if (strcmp(optarg, "dont") == 0)
-				pmtudisc = IP_PMTUDISC_DONT;
-			else if (strcmp(optarg, "want") == 0)
-				pmtudisc = IP_PMTUDISC_WANT;
-			else {
-				fprintf(stderr, "ping: wrong value for -M: do, dont, want are valid ones.\n");
-				exit(2);
-			}
-			break;
-		case 'V':
-			printf("ping utility, iputils-ss%s\n", SNAPSHOT);
-			exit(0);
-		COMMON_OPTIONS
-			common_options(ch);
-			break;
-		default:
-			usage();
-		}
-	}
-	argc -= optind;
-	argv += optind;
-
-	if (argc == 0)
-		usage();
-	if (argc > 1) {
-		if (options & F_RROUTE)
-			usage();
-		else if (options & F_TIMESTAMP) {
-			if (ts_type != IPOPT_TS_PRESPEC)
-				usage();
-			if (argc > 5)
-				usage();
-		} else {
-			if (argc > 10)
-				usage();
-			options |= F_SOURCEROUTE;
-		}
-	}
-	while (argc > 0) {
-		target = *argv;
-
-		memset((char *)&whereto, 0, sizeof(whereto));
-		whereto.sin_family = AF_INET;
-		if (inet_aton(target, &whereto.sin_addr) == 1) {
-			hostname = target;
-			if (argc == 1)
-				options |= F_NUMERIC;
-		} else {
-			hp = gethostbyname(target);
-			if (!hp) {
-				fprintf(stderr, "ping: unknown host %s\n", target);
-				exit(2);
-			}
-			memcpy(&whereto.sin_addr, hp->h_addr, 4);
-			strncpy(hnamebuf, hp->h_name, sizeof(hnamebuf) - 1);
-			hnamebuf[sizeof(hnamebuf) - 1] = 0;
-			hostname = hnamebuf;
-		}
-		if (argc > 1)
-			route[nroute++] = whereto.sin_addr.s_addr;
-		argc--;
-		argv++;
-	}
-
-	if (source.sin_addr.s_addr == 0) {
-		socklen_t alen;
-		struct sockaddr_in dst = whereto;
-		int probe_fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-		if (probe_fd < 0) {
-			perror("socket");
-			exit(2);
-		}
-		if (device) {
-			struct ifreq ifr;
-			memset(&ifr, 0, sizeof(ifr));
-			strncpy(ifr.ifr_name, device, IFNAMSIZ-1);
-			if (setsockopt(probe_fd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device)+1) == -1) {
-				if (IN_MULTICAST(ntohl(dst.sin_addr.s_addr))) {
-					struct ip_mreqn imr;
-					if (ioctl(probe_fd, SIOCGIFINDEX, &ifr) < 0) {
-						fprintf(stderr, "ping: unknown iface %s\n", device);
-						exit(2);
-					}
-					memset(&imr, 0, sizeof(imr));
-					imr.imr_ifindex = ifr.ifr_ifindex;
-					if (setsockopt(probe_fd, SOL_IP, IP_MULTICAST_IF, &imr, sizeof(imr)) == -1) {
-						perror("ping: IP_MULTICAST_IF");
-						exit(2);
-					}
-				}
-			}
-		}
-
-		if (settos &&
-		    setsockopt(probe_fd, IPPROTO_IP, IP_TOS, (char *)&settos, sizeof(int)) < 0)
-			perror("Warning: error setting QOS sockopts");
-
-		dst.sin_port = htons(1025);
-		if (nroute)
-			dst.sin_addr.s_addr = route[0];
-		if (connect(probe_fd, (struct sockaddr*)&dst, sizeof(dst)) == -1) {
-			if (errno == EACCES) {
-				if (broadcast_pings == 0) {
-					fprintf(stderr, "Do you want to ping broadcast? Then -b\n");
-					exit(2);
-				}
-				fprintf(stderr, "WARNING: pinging broadcast address\n");
-				if (setsockopt(probe_fd, SOL_SOCKET, SO_BROADCAST,
-					       &broadcast_pings, sizeof(broadcast_pings)) < 0) {
-					perror ("can't set broadcasting");
-					exit(2);
-				}
-				if (connect(probe_fd, (struct sockaddr*)&dst, sizeof(dst)) == -1) {
-					perror("connect");
-					exit(2);
-				}
-			} else {
-				perror("connect");
-				exit(2);
-			}
-		}
-		alen = sizeof(source);
-		if (getsockname(probe_fd, (struct sockaddr*)&source, &alen) == -1) {
-			perror("getsockname");
-			exit(2);
-		}
-		source.sin_port = 0;
-		close(probe_fd);
-	} while (0);
-
-	if (whereto.sin_addr.s_addr == 0)
-		whereto.sin_addr.s_addr = source.sin_addr.s_addr;
-
-	if (icmp_sock < 0) {
-		errno = socket_errno;
-		perror("ping: icmp open socket");
-		exit(2);
-	}
 
 	if (device) {
 		struct ifreq ifr;
 
 		memset(&ifr, 0, sizeof(ifr));
-		strncpy(ifr.ifr_name, device, IFNAMSIZ-1);
+		strncpy(ifr.ifr_name, device->if_name, IFNAMSIZ-1);
 		if (ioctl(icmp_sock, SIOCGIFINDEX, &ifr) < 0) {
-			fprintf(stderr, "ping: unknown iface %s\n", device);
+			fprintf(stderr, "ping: unknown iface %s\n", device->if_name);
 			exit(2);
 		}
 		cmsg.ipi.ipi_ifindex = ifr.ifr_ifindex;
 		cmsg_len = sizeof(cmsg);
 	}
 
-	if (broadcast_pings || IN_MULTICAST(ntohl(whereto.sin_addr.s_addr))) {
-		if (uid) {
-			if (interval < 1000) {
-				fprintf(stderr, "ping: broadcast ping with too short interval.\n");
-				exit(2);
-			}
-			if (pmtudisc >= 0 && pmtudisc != IP_PMTUDISC_DO) {
-				fprintf(stderr, "ping: broadcast ping does not fragment.\n");
-				exit(2);
-			}
-		}
-		if (pmtudisc < 0)
-			pmtudisc = IP_PMTUDISC_DO;
-	}
-
-	if (pmtudisc >= 0) {
-		if (setsockopt(icmp_sock, SOL_IP, IP_MTU_DISCOVER, &pmtudisc, sizeof(pmtudisc)) == -1) {
-			perror("ping: IP_MTU_DISCOVER");
-			exit(2);
-		}
-	}
-
-	if ((options&F_STRICTSOURCE) &&
-	    bind(icmp_sock, (struct sockaddr*)&source, sizeof(source)) == -1) {
-		perror("bind");
-		exit(2);
-	}
+	memcpy (&whereto, &where, sizeof(whereto));
 
 	if (1) {
 		struct icmp_filter filt;
@@ -399,57 +150,6 @@ main(int argc, char **argv)
 	if (setsockopt(icmp_sock, SOL_IP, IP_RECVERR, (char *)&hold, sizeof(hold)))
 		fprintf(stderr, "WARNING: your kernel is veeery old. No problems.\n");
 
-	/* record route option */
-	if (options & F_RROUTE) {
-		memset(rspace, 0, sizeof(rspace));
-		rspace[0] = IPOPT_NOP;
-		rspace[1+IPOPT_OPTVAL] = IPOPT_RR;
-		rspace[1+IPOPT_OLEN] = sizeof(rspace)-1;
-		rspace[1+IPOPT_OFFSET] = IPOPT_MINOFF;
-		optlen = 40;
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_OPTIONS, rspace, sizeof(rspace)) < 0) {
-			perror("ping: record route");
-			exit(2);
-		}
-	}
-	if (options & F_TIMESTAMP) {
-		memset(rspace, 0, sizeof(rspace));
-		rspace[0] = IPOPT_TIMESTAMP;
-		rspace[1] = (ts_type==IPOPT_TS_TSONLY ? 40 : 36);
-		rspace[2] = 5;
-		rspace[3] = ts_type;
-		if (ts_type == IPOPT_TS_PRESPEC) {
-			int i;
-			rspace[1] = 4+nroute*8;
-			for (i=0; i<nroute; i++)
-				*(__u32*)&rspace[4+i*8] = route[i];
-		}
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_OPTIONS, rspace, rspace[1]) < 0) {
-			rspace[3] = 2;
-			if (setsockopt(icmp_sock, IPPROTO_IP, IP_OPTIONS, rspace, rspace[1]) < 0) {
-				perror("ping: ts option");
-				exit(2);
-			}
-		}
-		optlen = 40;
-	}
-	if (options & F_SOURCEROUTE) {
-		int i;
-		memset(rspace, 0, sizeof(rspace));
-		rspace[0] = IPOPT_NOOP;
-		rspace[1+IPOPT_OPTVAL] = (options & F_SO_DONTROUTE) ? IPOPT_SSRR
-			: IPOPT_LSRR;
-		rspace[1+IPOPT_OLEN] = 3 + nroute*4;
-		rspace[1+IPOPT_OFFSET] = IPOPT_MINOFF;
-		for (i=0; i<nroute; i++)
-			*(__u32*)&rspace[4+i*4] = route[i];
-
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_OPTIONS, rspace, 4 + nroute*4) < 0) {
-			perror("ping: record route");
-			exit(2);
-		}
-		optlen = 40;
-	}
 
 	/* Estimate memory eaten by single packet. It is rough estimate.
 	 * Actually, for small datalen's it depends on kernel side a lot. */
@@ -465,27 +165,6 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (options & F_NOLOOP) {
-		int loop = 0;
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_MULTICAST_LOOP,
-							&loop, 1) == -1) {
-			perror ("ping: can't disable multicast loopback");
-			exit(2);
-		}
-	}
-	if (options & F_TTL) {
-		int ittl = ttl;
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_MULTICAST_TTL,
-							&ttl, 1) == -1) {
-			perror ("ping: can't set multicast time-to-live");
-			exit(2);
-		}
-		if (setsockopt(icmp_sock, IPPROTO_IP, IP_TTL,
-							&ittl, sizeof(ittl)) == -1) {
-			perror ("ping: can't set unicast time-to-live");
-			exit(2);
-		}
-	}
 
 	if (datalen > 0xFFFF - 8 - optlen - 20) {
 		if (uid || datalen > sizeof(outpack)-8) {
@@ -506,14 +185,13 @@ main(int argc, char **argv)
 
 	printf("PING %s (%s) ", hostname, inet_ntoa(whereto.sin_addr));
 	if (device || (options&F_STRICTSOURCE))
-		printf("from %s %s: ", inet_ntoa(source.sin_addr), device ?: "");
+		printf("from %s %s: ", inet_ntoa(source.sin_addr), device->if_name ?: "");
 	printf("%d(%d) bytes of data.\n", datalen, datalen+8+optlen+20);
 
 	setup(icmp_sock);
 
 	main_loop(icmp_sock, packet, packlen);
 }
-#endif
 
 
 int receive_error_msg()
@@ -1171,33 +849,6 @@ pr_addr(__u32 addr)
 }
 
 
-/* Set Type of Service (TOS) and other Quality of Service relating bits */
-int parsetos(char *str)
-{
-	const char *cp;
-	int tos;
-	char *ep;
-
-	/* handle both hex and decimal values */
-	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
-		cp = str + 2;
-		tos = (int)strtol(cp, &ep, 16);
-	} else
-		tos = (int)strtol(str, &ep, 10);
-
-	/* doesn't look like decimal or hex, eh? */
-	if (*ep != '\0') {
-		fprintf(stderr, "ping: \"%s\" bad value for TOS\n", str);
-		exit(2);
-	}
-
-	if (tos > TOS_MAX) {
-		fprintf(stderr, "ping: the decimal value of TOS bits must be 0-254 (or zero)\n");
-		exit(2);
-	}
-	return(tos);
-}
-
 #include <linux/filter.h>
 
 void install_filter(void)
@@ -1227,15 +878,4 @@ void install_filter(void)
 
 	if (setsockopt(icmp_sock, SOL_SOCKET, SO_ATTACH_FILTER, &filter, sizeof(filter)))
 		perror("WARNING: failed to install socket filter\n");
-}
-
-
-void usage(void)
-{
-	fprintf(stderr,
-"Usage: ping [-LRUbdfnqrvVaAD] [-c count] [-i interval] [-w deadline]\n"
-"            [-p pattern] [-s packetsize] [-t ttl] [-I interface]\n"
-"            [-M pmtudisc-hint] [-m mark] [-S sndbuf]\n"
-"            [-T tstamp-options] [-Q tos] [hop1 ...] destination\n");
-	exit(2);
 }

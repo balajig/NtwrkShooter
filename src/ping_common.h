@@ -9,7 +9,6 @@
 #include <sys/time.h>
 #include <sys/signal.h>
 #include <sys/ioctl.h>
-#include <net/if.h>
 #include <sys/uio.h>
 #include <sys/poll.h>
 #include <ctype.h>
@@ -21,8 +20,7 @@
 #include <arpa/inet.h>
 #include <linux/types.h>
 #include <linux/errqueue.h>
-
-#include "SNAPSHOT.h"
+#include "nt.h"
 
 #define	DEFDATALEN	(64 - 8)	/* default data length */
 

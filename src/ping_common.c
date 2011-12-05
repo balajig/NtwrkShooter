@@ -96,155 +96,6 @@ static void fill(char *patp)
 	}
 }
 
-void common_options(int ch)
-{
-	switch(ch) {
-	case 'a':
-		options |= F_AUDIBLE;
-		break;
-	case 'A':
-		options |= F_ADAPTIVE;
-		break;
-	case 'c':
-		npackets = atoi(optarg);
-		if (npackets <= 0) {
-			fprintf(stderr, "ping: bad number of packets to transmit.\n");
-			exit(2);
-		}
-		break;
-	case 'd':
-		options |= F_SO_DEBUG;
-		break;
-	case 'D':
-		options |= F_PTIMEOFDAY;
-		break;
-	case 'i':		/* wait between sending packets */
-	{
-		if (strchr(optarg, '.')) {
-			float t;
-			if (sscanf(optarg, "%f", &t) != 1) {
-				fprintf(stderr, "ping: bad timing interval.\n");
-				exit(2);
-			}
-			interval = (int)(t*1000);
-		} else if (sscanf(optarg, "%d", &interval) == 1) {
-			interval *= 1000;
-		} else {
-			fprintf(stderr, "ping: bad timing interval.\n");
-			exit(2);
-		}
-
-		if (interval < 0) {
-			fprintf(stderr, "ping: bad timing interval.\n");
-			exit(2);
-		}
-		options |= F_INTERVAL;
-		break;
-	}
-	case 'm':
-	{
-		char *endp;
-		mark = (int)strtoul(optarg, &endp, 10);
-		if (mark < 0 || *endp != '\0') {
-			fprintf(stderr, "mark cannot be negative");
-			exit(2);
-		}
-		options |= F_MARK;
-		break;
-	}
-	case 'w':
-		deadline = atoi(optarg);
-		if (deadline < 0) {
-			fprintf(stderr, "ping: bad wait time.\n");
-			exit(2);
-		}
-		break;
-	case 'l':
-		preload = atoi(optarg);
-		if (preload <= 0) {
-			fprintf(stderr, "ping: bad preload value, should be 1..%d\n", mx_dup_ck);
-			exit(2);
-		}
-		if (preload > mx_dup_ck)
-			preload = mx_dup_ck;
-		if (uid && preload > 3) {
-			fprintf(stderr, "ping: cannot set preload to value > 3\n");
-			exit(2);
-		}
-		break;
-	case 'S':
-		sndbuf = atoi(optarg);
-		if (sndbuf <= 0) {
-			fprintf(stderr, "ping: bad sndbuf value.\n");
-			exit(2);
-		}
-		break;
-	case 'f':
-		options |= F_FLOOD;
-		setbuf(stdout, (char *)NULL);
-		/* fallthrough to numeric - avoid gethostbyaddr during flood */
-	case 'n':
-		options |= F_NUMERIC;
-		break;
-	case 'p':		/* fill buffer with user pattern */
-		options |= F_PINGFILLED;
-		fill(optarg);
-		break;
-	case 'q':
-		options |= F_QUIET;
-		break;
-	case 'r':
-		options |= F_SO_DONTROUTE;
-		break;
-	case 's':		/* size of packet to send */
-		datalen = atoi(optarg);
-		if (datalen < 0) {
-			fprintf(stderr, "ping: illegal negative packet size %d.\n", datalen);
-			exit(2);
-		}
-		if (datalen > maxpacket - 8) {
-			fprintf(stderr, "ping: packet size too large: %d\n",
-				datalen);
-			exit(2);
-		}
-		break;
-	case 'v':
-		options |= F_VERBOSE;
-		break;
-	case 'L':
-		options |= F_NOLOOP;
-		break;
-	case 't':
-		options |= F_TTL;
-		ttl = atoi(optarg);
-		if (ttl < 0 || ttl > 255) {
-			fprintf(stderr, "ping: ttl %u out of range\n", ttl);
-			exit(2);
-		}
-		break;
-	case 'U':
-		options |= F_LATENCY;
-		break;
-	case 'B':
-		options |= F_STRICTSOURCE;
-		break;
-	case 'W':
-		lingertime = atoi(optarg);
-		if (lingertime < 0 || lingertime > INT_MAX/1000000) {
-			fprintf(stderr, "ping: bad linger time.\n");
-			exit(2);
-		}
-		lingertime *= 1000;
-		break;
-	case 'V':
-		printf("ping utility, iputils-ss%s\n", SNAPSHOT);
-		exit(0);
-	default:
-		abort();
-	}
-}
-
-
 static void sigexit(int signo)
 {
 	exiting = 1;
@@ -449,9 +300,6 @@ void setup(int icmp_sock)
 	int hold;
 	struct timeval tv;
 
-	if ((options & F_FLOOD) && !(options & F_INTERVAL))
-		interval = 0;
-
 	if (uid && interval < MINUSERINTERVAL) {
 		fprintf(stderr, "ping: cannot flood; minimal interval, allowed for user, is %dms\n", MINUSERINTERVAL);
 		exit(2);
@@ -463,27 +311,6 @@ void setup(int icmp_sock)
 	}
 
 	hold = 1;
-	if (options & F_SO_DEBUG)
-		setsockopt(icmp_sock, SOL_SOCKET, SO_DEBUG, (char *)&hold, sizeof(hold));
-	if (options & F_SO_DONTROUTE)
-		setsockopt(icmp_sock, SOL_SOCKET, SO_DONTROUTE, (char *)&hold, sizeof(hold));
-
-#ifdef SO_TIMESTAMP
-	if (!(options&F_LATENCY)) {
-		int on = 1;
-		if (setsockopt(icmp_sock, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on)))
-			fprintf(stderr, "Warning: no SO_TIMESTAMP support, falling back to SIOCGSTAMP\n");
-	}
-#endif
-	if (options & F_MARK) {
-		if (setsockopt(icmp_sock, SOL_SOCKET, SO_MARK,
-				&mark, sizeof(mark)) == -1) {
-			/* we probably dont wanna exit since old kernels
-			 * dont support mark ..
-			*/
-			fprintf(stderr, "Warning: Failed to set mark %d\n", mark);
-		}
-	}
 
 	/* Set some SNDTIMEO to prevent blocking forever
 	 * on sends, when device is too slow or stalls. Just put limit

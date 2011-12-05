@@ -245,6 +245,49 @@ struct if_info * get_next_if_info (struct if_info *p)
 	return nxtif;
 }
 
+struct if_info * get_if (void *key, uint8_t key_type)
+{
+	struct if_info    *p = NULL;
+	struct list_head  *head = &if_hd;
+	struct if_info    key_data;
+
+	memset (&key_data, 0, sizeof(key_data));
+
+	switch (key_type) {
+		case GET_IF_BY_NAME:
+			strcpy (key_data.if_name, (char *)key);
+			break;
+		case GET_IF_BY_IPADDR:
+			key_data.ipv4_address = (uint32_t)key;
+			break;
+		case GET_IF_BY_IFINDEX:
+			key_data.if_idx = (int32_t)key;
+			break;
+		default:
+			fprintf (stderr, "Invalid Search Type\n");
+			return NULL;
+	}
+
+	list_for_each_entry (p, head, nxt_if) {
+		switch (key_type) {
+			case GET_IF_BY_NAME:
+				if (!strcmp (key_data.if_name, p->if_name))
+					return p;
+				break;
+			case GET_IF_BY_IPADDR:
+				if (key_data.ipv4_address == p->ipv4_address)
+					return p;
+				break;
+			case GET_IF_BY_IFINDEX:
+				if (key_data.if_idx == p->if_idx)
+					return p;
+				break;
+		}
+	}
+
+	return NULL;
+}
+
 int make_if_up (struct if_info *p)
 {
 	struct ifreq ifr;
@@ -274,7 +317,7 @@ int make_if_up (struct if_info *p)
 	if (ioctl(fd, SIOCGIFFLAGS, &ifr) == 0)  {
 		p->admin_state = ifr.ifr_flags & IFF_UP;
 		p->oper_state  = ifr.ifr_flags & IFF_RUNNING;
-	} 
+	}
 
 	return 0;
 }
@@ -282,7 +325,6 @@ int make_if_up (struct if_info *p)
 /*Following routines just to verify the database*/
 void display_interface_info (void)
 {
-
 	struct if_info    *p = NULL;
 	struct list_head  *head = &if_hd;
 
@@ -290,6 +332,28 @@ void display_interface_info (void)
 	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
 
 	list_for_each_entry (p, head, nxt_if) {
+		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+	}
+}
+
+void test_get_if ()
+{
+	struct if_info    *p = get_if ((void *)"eth0", GET_IF_BY_NAME);
+
+	fprintf (stdout, "\nIf_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
+	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
+
+	if (p) {
+		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+	}
+
+	if ((p = get_if ((void *)3, GET_IF_BY_IFINDEX))) {
+		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
+	}
+	if ((p = get_if ((void *)5, GET_IF_BY_IFINDEX))) {
 		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}

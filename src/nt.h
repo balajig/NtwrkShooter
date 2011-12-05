@@ -23,6 +23,14 @@
 #include <linux/sockios.h>
 #include "list.h"
 
+
+enum GET_IF {
+	GET_IF_BY_NAME = 1, 
+	GET_IF_BY_IPADDR,
+	GET_IF_BY_IFINDEX
+};
+
+
 struct if_info {
 	struct list_head nxt_if;
 	char		if_name[IFNAMSIZ];
