@@ -107,6 +107,11 @@ int pmtudisc = -1;
 
 struct sockaddr_in whereto;
 
+int ping_me (uint32_t ip_addr)
+{
+	return -1;
+}
+
 int
 ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info *device)
 {

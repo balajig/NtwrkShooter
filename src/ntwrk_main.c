@@ -76,8 +76,7 @@ int main (int argc, char **argv)
 				/*Unable to make the interface up*/
 				/*Del this interface from the list*/
 				list_del (&p->nxt_if);
-				fprintf (stderr, "\033[32mNTS :\033[0m\033[31m Unable to bring the Interface \"%s\" UP \033[0m\n", 
-					 p->if_name);
+				nts_debug ("Unable to bring the Interface \"%s\" UP \n", p->if_name);
 			}
 		}
 	}
@@ -87,12 +86,19 @@ int main (int argc, char **argv)
 		return -1;
 	}
 
+
+	rtnl_init();
+
 	if (resolver_init () < 0) {
 		fprintf (stderr, "\033[32mNTS : \033[0m\033[31mUnable to Read NAME SERVER INFO \033[0m\n");
 		return -1;
 	}
 
-	rtnl_init();
+
+	if (check_ns_state () < 0) {
+		fprintf (stderr, "\033[32mNTS : \033[0m\033[31mNameServers configured are down \033[0m\n");
+		return -1;
+	}
 
 	return 0;
 }

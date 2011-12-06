@@ -14,12 +14,13 @@
 #define RESOLVE_CONF_FILE	"/etc/resolv.conf"
 
 struct nameserver {
-	uint32_t namesrv_ip;
+	struct in_addr namesrv_ip;;
 };
 
 static struct nameserver *name_servers = NULL;
+static int ns_count = 0;
 
-int read_resolve_conf (void) 
+static int read_resolve_conf (void) 
 {
 	char *    line = NULL;
 	size_t    len = 0;
@@ -49,10 +50,11 @@ int read_resolve_conf (void)
 			if (sub[len -1] == '\n')
 				sub[len - 1] = '\0';
 
-			(name_servers +index)->namesrv_ip = ntohl(inet_addr(sub));
+			(name_servers +index)->namesrv_ip.s_addr = inet_addr(sub);
 
-			nts_debug ("Name server IP Address %d  :  \"%x\"", index + 1, 
-					(name_servers + index)->namesrv_ip);
+			nts_debug ("Name server IP Address %d  :  \"%s\"", index + 1, sub);
+
+			ns_count++;
 
 			if (++index >= MAX_NAME_SERVERS)
 				break;
@@ -67,7 +69,7 @@ int read_resolve_conf (void)
 /* Return the ip address if host provided by name
  * Sasi: I Hope it is not required for reading namesevers ?*/
 
-char * to_ip_addr (char * addr)
+static char * to_ip_addr (char * addr)
 {
 	struct hostent * host = NULL;
 
@@ -77,6 +79,31 @@ char * to_ip_addr (char * addr)
 		return inet_ntoa(*(struct in_addr *)host->h_addr);
 	else
 		return NULL;
+}
+
+int check_ns_state (void) 
+{
+	int idx = 0;
+	int no_resp = 0;
+	
+	while (idx < ns_count) {
+
+		if (ping_me ((name_servers + idx)->namesrv_ip.s_addr) < 0) {
+
+			nts_debug ("Name server \"%s\" not responding .......", 
+					inet_ntoa((name_servers + idx)->namesrv_ip));
+			no_resp++;
+		}
+		idx++;	
+	}
+
+	/*name servers not responding*/	
+	if (no_resp == ns_count) {
+		/*XXX:Why can't we try for public DNS servers? */
+		return -1;
+	}
+	/*Name servers are UP*/
+	return 0;
 }
 
 

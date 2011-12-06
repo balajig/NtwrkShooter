@@ -168,14 +168,14 @@ static int fetch_and_update_if_info (struct if_info *ife)
 	if (ioctl(fd, SIOCGIFADDR, (char *)&ifr) == 0) {
 
 		struct sockaddr_in *sin = (struct sockaddr_in *)&ifr.ifr_addr;
-		ife->ipv4_address = ntohl(sin->sin_addr.s_addr);
+		ife->ipv4_address.s_addr = sin->sin_addr.s_addr;
 
-		nts_debug ("\"%s\" interface IP address :  \"%x\"", ifname, ife->ipv4_address);
+		nts_debug ("\"%s\" Interface IP address :  \"%s\"", ifname, inet_ntoa(ife->ipv4_address));
 
 		if (ioctl(fd, SIOCGIFNETMASK, &ifr) == 0) {
 			struct sockaddr_in *sin = (struct sockaddr_in *)&ifr.ifr_addr;
-			ife->ipv4_netmask = ntohl(sin->sin_addr.s_addr);
-			nts_debug ("\"%s\" Interface IP Netmask :  \"%x\"", ifname, ife->ipv4_netmask);
+			ife->ipv4_netmask.s_addr = sin->sin_addr.s_addr;
+			nts_debug ("\"%s\" Interface IP Netmask :  \"%s\"", ifname, inet_ntoa (ife->ipv4_netmask));
 		} else
 			nts_debug ("\033[31mIP Netmask not configured for \"%s\"\033[0m", ifname);
 
@@ -258,7 +258,7 @@ struct if_info * get_if (void *key, uint8_t key_type)
 			strcpy (key_data.if_name, (char *)key);
 			break;
 		case GET_IF_BY_IPADDR:
-			key_data.ipv4_address = (uint32_t)key;
+			key_data.ipv4_address.s_addr = (uint32_t)key;
 			break;
 		case GET_IF_BY_IFINDEX:
 			key_data.if_idx = (int32_t)key;
@@ -275,7 +275,7 @@ struct if_info * get_if (void *key, uint8_t key_type)
 					return p;
 				break;
 			case GET_IF_BY_IPADDR:
-				if (key_data.ipv4_address == p->ipv4_address)
+				if (key_data.ipv4_address.s_addr == p->ipv4_address.s_addr)
 					return p;
 				break;
 			case GET_IF_BY_IFINDEX:
@@ -328,11 +328,11 @@ void display_interface_info (void)
 	struct if_info    *p = NULL;
 	struct list_head  *head = &if_hd;
 
-	fprintf (stdout, "\nIf_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
-	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
+	fprintf  (stderr, "\nIf_name     If_Index      If_addess        If_netmask      If_adminstate    If_operstate\n");
+	fprintf (stderr,   "-------     --------      ----------        ----------      -------------    ------------\n");
 
 	list_for_each_entry (p, head, nxt_if) {
-		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		fprintf (stderr, "%-10s   %-10d    %-15s    %-15s     %-10s   %-10s\n", p->if_name, p->if_idx, inet_ntoa(p->ipv4_address), inet_ntoa(p->ipv4_netmask), 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}
 }
@@ -341,20 +341,20 @@ void test_get_if ()
 {
 	struct if_info    *p = get_if ((void *)"eth0", GET_IF_BY_NAME);
 
-	fprintf (stdout, "\nIf_name     If_Index      If_addess    If_netmask    If_adminstate    If_operstate\n");
-	fprintf (stdout, "-------     --------      ----------   ----------    -------------    ------------\n");
+	fprintf  (stderr, "\nIf_name     If_Index      If_addess        If_netmask      If_adminstate    If_operstate\n");
+	fprintf (stderr,   "-------     --------      ----------        ----------      -------------    ------------\n");
 
 	if (p) {
-		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		printf ("%-10s   %-10d   %-10s   %-10s  %10s   %10s\n", p->if_name, p->if_idx, inet_ntoa(p->ipv4_address), inet_ntoa(p->ipv4_netmask), 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}
 
 	if ((p = get_if ((void *)3, GET_IF_BY_IFINDEX))) {
-		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		printf ("%-10s   %-10d   %-10s   %-10s  %10s   %10s\n", p->if_name, p->if_idx, inet_ntoa(p->ipv4_address), inet_ntoa(p->ipv4_netmask), 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}
 	if ((p = get_if ((void *)5, GET_IF_BY_IFINDEX))) {
-		printf ("%-10s   %-10d   %-10x   %-10x  %10s   %10s\n", p->if_name, p->if_idx, p->ipv4_address, p->ipv4_netmask, 
+		printf ("%-10s   %-10d   %-10s   %-10s  %10s   %10s\n", p->if_name, p->if_idx, inet_ntoa(p->ipv4_address), inet_ntoa(p->ipv4_netmask), 
 				(p->admin_state & IFF_UP)?"UP": "DOWN", (p->oper_state & IFF_RUNNING)?"UP":"DOWN");
 	}
 }

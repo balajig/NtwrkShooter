@@ -43,8 +43,8 @@ enum GET_IF {
 struct if_info {
 	struct list_head nxt_if;
 	char		if_name[IFNAMSIZ];
-	unsigned int	ipv4_address;  /*XXX: Currently our focus is only on IPV4 address*/
-	unsigned int    ipv4_netmask;
+	struct in_addr	ipv4_netmask;
+	struct in_addr	ipv4_address;
 	int		sock_fd;
 	int		if_idx;
 	int		admin_state;	/*IFF_UP or IFF_DOWN*/
@@ -99,5 +99,7 @@ int rtnl_init(void);
 int nts_debug (char *fmt, ...);
 void set_debug_enable (void);
 int resolver_init (void);
+int ping_me (uint32_t );
+int check_ns_state (void);
 
 #endif  /* NT_H */
