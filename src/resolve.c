@@ -52,7 +52,7 @@ int read_resolve_conf (void)
 			(name_servers +index)->namesrv_ip = ntohl(inet_addr(sub));
 
 			nts_debug ("Name server IP Address %d  :  \"%x\"", index + 1, 
-				   (name_servers + index)->namesrv_ip);
+					(name_servers + index)->namesrv_ip);
 
 			if (++index >= MAX_NAME_SERVERS)
 				break;
@@ -69,12 +69,12 @@ int read_resolve_conf (void)
 
 char * to_ip_addr (char * addr)
 {
-        struct hostent * host = NULL;
+	struct hostent * host = NULL;
 
-        host = gethostbyname(addr);
+	host = gethostbyname(addr);
 
 	if (host)
-	        return inet_ntoa(*(struct in_addr *)host->h_addr);
+		return inet_ntoa(*(struct in_addr *)host->h_addr);
 	else
 		return NULL;
 }
