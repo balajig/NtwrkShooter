@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <linux/sockios.h>
 #include <libintl.h>
+#include <netdb.h>
 #include "list.h"
 #include "progname.h"
 
@@ -97,5 +98,6 @@ int  read_interfaces (void);
 int rtnl_init(void);
 int nts_debug (char *fmt, ...);
 void set_debug_enable (void);
+int resolver_init (void);
 
 #endif  /* NT_H */
