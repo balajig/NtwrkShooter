@@ -88,7 +88,7 @@ int check_ns_state (void)
 	
 	while (idx < ns_count) {
 
-		if (ping_me ((name_servers + idx)->namesrv_ip.s_addr) < 0) {
+		if (ping_me ((name_servers + idx)->namesrv_ip) < 0) {
 
 			nts_debug ("Name server \"%s\" not responding .......", 
 					inet_ntoa((name_servers + idx)->namesrv_ip));

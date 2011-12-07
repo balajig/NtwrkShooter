@@ -99,7 +99,7 @@ int rtnl_init(void);
 int nts_debug (char *fmt, ...);
 void set_debug_enable (void);
 int resolver_init (void);
-int ping_me (uint32_t );
+int ping_me (struct in_addr );
 int check_ns_state (void);
 
 #endif  /* NT_H */
