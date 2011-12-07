@@ -206,15 +206,6 @@ resend:
 	if (i == 0) {
 		oom_count = 0;
 		advance_ntransmitted();
-#if 0
-		if (!(options & F_QUIET) && (options & F_FLOOD)) {
-			/* Very silly, but without this output with
-			 * high preload or pipe size is very confusing. */
-			if ((preload < screen_width && pipesize < screen_width) ||
-			    in_flight() < screen_width)
-				write(STDOUT_FILENO, ".", 1);
-		}
-#endif
 		return interval - tokens;
 	}
 
@@ -325,12 +316,7 @@ void setup(int icmp_sock)
 	tv.tv_sec = SCHINT(interval)/1000;
 	tv.tv_usec = 1000*(SCHINT(interval)%1000);
 	if (setsockopt(icmp_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(tv)));
-#if 0
-		;options |= F_FLOOD_POLL;
-#endif
-#if 0
-	if (!(options & F_PINGFILLED)) 
-#endif
+	if (1) /*FIXME:*/
 	{
 		int i;
 		u_char *p = outpack+8;
@@ -412,8 +398,8 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 		 * 2. Avoid use of poll(), when recvmsg() can provide
 		 *    timed waiting (SO_RCVTIMEO). */
 		polling = 0;
-#if 0
-		if ((options & (F_ADAPTIVE|F_FLOOD_POLL)) || next<SCHINT(interval)) {
+
+		if (next<SCHINT(interval)) {
 			int recv_expected = in_flight();
 
 			/* If we are here, recvmsg() is unable to wait for
@@ -434,8 +420,7 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 				}
 			}
 
-			if (!polling &&
-			    ((options & (F_ADAPTIVE|F_FLOOD_POLL)) || interval)) {
+			if (!polling && (interval)) {
 				struct pollfd pset;
 				pset.fd = icmp_sock;
 				pset.events = POLLIN|POLLERR;
@@ -446,7 +431,6 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 				polling = MSG_DONTWAIT;
 			}
 		}
-#endif
 
 		for (;;) {
 			struct timeval *recv_timep = NULL;
@@ -488,14 +472,11 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 					recv_timep = (struct timeval*)CMSG_DATA(c);
 				}
 #endif
-#if 0
-				if ((options&F_LATENCY) || recv_timep == NULL) {
-					if ((options&F_LATENCY) ||
-					    ioctl(icmp_sock, SIOCGSTAMP, &recv_time))
+				if (recv_timep == NULL) {
+					if (ioctl(icmp_sock, SIOCGSTAMP, &recv_time))
 						gettimeofday(&recv_time, NULL);
 					recv_timep = &recv_time;
 				}
-#endif
 
 				not_ours = parse_reply(&msg, cc, addrbuf, recv_timep);
 			}
@@ -701,13 +682,11 @@ int finish(void)
 		printf("%spipe %d", comma, pipesize);
 		comma = ", ";
 	}
-#if 0
-	if (ntransmitted > 1 && (!interval || (options&(F_FLOOD|F_ADAPTIVE)))) {
+	if (ntransmitted > 1 && !interval) {
 		int ipg = (1000000*(long long)tv.tv_sec+tv.tv_usec)/(ntransmitted-1);
 		printf("%sipg/ewma %d.%03d/%d.%03d ms",
 		       comma, ipg/1000, ipg%1000, rtt/8000, (rtt/8)%1000);
 	}
-#endif
 	putchar('\n');
 	return 0;
 }

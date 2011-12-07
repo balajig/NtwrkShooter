@@ -78,9 +78,6 @@ struct icmp_filter {
 #define MAX_HOSTNAMELEN	NI_MAXHOST
 
 
-
-
-int optlen = 0;
 int settos = 0;			/* Set TOS, Precendence or other QOS options */
 int icmp_sock;			/* socket file descriptor */
 u_char outpack[0x10000];
@@ -115,6 +112,13 @@ int ping_me (struct in_addr ip_addr)
 	struct sockaddr_in where;
 	struct sockaddr_in source;
 
+	exiting = 0;
+	ntransmitted  = 0;
+	nreceived = 0;
+	nrepeats = 0;
+	nerrors = 0;
+	nchecksum = 0;
+	
 	where.sin_family = AF_INET;
 	where.sin_addr.s_addr = ip_addr.s_addr;
 	source.sin_addr.s_addr = inet_addr ("10.10.10.173");
@@ -122,15 +126,50 @@ int ping_me (struct in_addr ip_addr)
 	return 0;
 }
 
+
+int setup_icmp_sock (void)
+{
+	int hold = 0;
+	struct icmp_filter filt;
+
+	icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+
+	if (icmp_sock < 0)
+		return -1;
+
+	filt.data = ~((1<<ICMP_SOURCE_QUENCH)|
+			(1<<ICMP_DEST_UNREACH)|
+			(1<<ICMP_TIME_EXCEEDED)|
+			(1<<ICMP_PARAMETERPROB)|
+			(1<<ICMP_REDIRECT)|
+			(1<<ICMP_ECHOREPLY));
+	if (setsockopt(icmp_sock, SOL_RAW, ICMP_FILTER, (char*)&filt, sizeof(filt)) == -1)
+		perror("WARNING: setsockopt(ICMP_FILTER)");
+
+	if (setsockopt(icmp_sock, SOL_IP, IP_RECVERR, (char *)&hold, sizeof(hold)))
+		fprintf(stderr, "WARNING: your kernel is veeery old. No problems.\n");
+
+	/* Estimate memory eaten by single packet. It is rough estimate.
+	 * Actually, for small datalen's it depends on kernel side a lot. */
+	hold = datalen + 8;
+	hold += ((hold+511)/512)* (20 + 16 + 64 + 160);
+	sock_setbufs(icmp_sock, hold);
+
+	setup(icmp_sock);
+}
+
+int ping_setup (void)
+{
+	return setup_icmp_sock ();	
+}
+
+
 int
 ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info *device)
 {
-	int hold, packlen;
-	int socket_errno;
+	int rval  = -1;
+	int packlen;
 	u_char *packet;
-
-	icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	socket_errno = errno;
 
 	source.sin_family = AF_INET;
 
@@ -149,28 +188,6 @@ ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info 
 
 	memcpy (&whereto, &where, sizeof(whereto));
 
-	if (1) {
-		struct icmp_filter filt;
-		filt.data = ~((1<<ICMP_SOURCE_QUENCH)|
-			      (1<<ICMP_DEST_UNREACH)|
-			      (1<<ICMP_TIME_EXCEEDED)|
-			      (1<<ICMP_PARAMETERPROB)|
-			      (1<<ICMP_REDIRECT)|
-			      (1<<ICMP_ECHOREPLY));
-		if (setsockopt(icmp_sock, SOL_RAW, ICMP_FILTER, (char*)&filt, sizeof(filt)) == -1)
-			perror("WARNING: setsockopt(ICMP_FILTER)");
-	}
-
-	hold = 1;
-	if (setsockopt(icmp_sock, SOL_IP, IP_RECVERR, (char *)&hold, sizeof(hold)))
-		fprintf(stderr, "WARNING: your kernel is veeery old. No problems.\n");
-
-
-	/* Estimate memory eaten by single packet. It is rough estimate.
-	 * Actually, for small datalen's it depends on kernel side a lot. */
-	hold = datalen + 8;
-	hold += ((hold+511)/512)*(optlen + 20 + 16 + 64 + 160);
-	sock_setbufs(icmp_sock, hold);
 
 	if (broadcast_pings) {
 		if (setsockopt(icmp_sock, SOL_SOCKET, SO_BROADCAST,
@@ -181,34 +198,31 @@ ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info 
 	}
 
 
-	if (datalen > 0xFFFF - 8 - optlen - 20) {
+	if (datalen > 0xFFFF - 8 - 20) {
 		if (uid || datalen > sizeof(outpack)-8) {
-			fprintf(stderr, "Error: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20-optlen);
+			fprintf(stderr, "Error: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20);
 			exit(2);
 		}
 		/* Allow small oversize to root yet. It will cause EMSGSIZE. */
-		fprintf(stderr, "WARNING: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20-optlen);
+		fprintf(stderr, "WARNING: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20);
 	}
-#if 0
-	if (datalen >= sizeof(struct timeval))	/* can we time transfer */
-		timing = 1;
-#endif
+
 	packlen = datalen + MAXIPLEN + MAXICMPLEN;
+
 	if (!(packet = (u_char *)malloc((u_int)packlen))) {
 		fprintf(stderr, "ping: out of memory.\n");
 		exit(2);
 	}
 
 	printf("PING  %s ", inet_ntoa(whereto.sin_addr));
-#if 0
-	if (device || (options&F_STRICTSOURCE))
-		printf("from %s %s: ", inet_ntoa(source.sin_addr), device->if_name ?: "");
-#endif
-	printf("%d(%d) bytes of data.\n", datalen, datalen+8+optlen+20);
 
-	setup(icmp_sock);
+	printf("%d(%d) bytes of data.\n", datalen, datalen+8+20);
 
-	return main_loop(icmp_sock, packet, packlen);
+	rval = main_loop(icmp_sock, packet, packlen);
+
+	free (packet);
+
+	return rval;
 }
 
 
@@ -252,16 +266,10 @@ int receive_error_msg()
 
 	if (e->ee_origin == SO_EE_ORIGIN_LOCAL) {
 		local_errors++;
-#if 0
-		if (options & F_QUIET)
-			goto out;
-		if (options & F_FLOOD)
-			write(STDOUT_FILENO, "E", 1);
-		else if (e->ee_errno != EMSGSIZE)
+		if (e->ee_errno != EMSGSIZE)
 			fprintf(stderr, "ping: local error: %s\n", strerror(e->ee_errno));
 		else
 			fprintf(stderr, "ping: local error: Message too long, mtu=%u\n", e->ee_info);
-#endif
 		nerrors++;
 	} else if (e->ee_origin == SO_EE_ORIGIN_ICMP) {
 		struct sockaddr_in *sin = (struct sockaddr_in*)(e+1);
@@ -290,18 +298,11 @@ int receive_error_msg()
 
 		net_errors++;
 		nerrors++;
-#if 0
-		if (options & F_QUIET)
-			goto out;
-		if (options & F_FLOOD) {
-			write(STDOUT_FILENO, "\bE", 2);
-		} else {
-			print_timestamp();
-			printf("From %s icmp_seq=%u ", pr_addr(sin->sin_addr.s_addr), ntohs(icmph.un.echo.sequence));
-			pr_icmph(e->ee_type, e->ee_code, e->ee_info, NULL);
-			fflush(stdout);
-		}
-#endif
+
+		print_timestamp();
+		printf("From %s icmp_seq=%u ", pr_addr(sin->sin_addr.s_addr), ntohs(icmph.un.echo.sequence));
+		pr_icmph(e->ee_type, e->ee_code, e->ee_info, NULL);
+		fflush(stdout);
 	}
 
 out:
@@ -379,11 +380,6 @@ parse_reply(struct msghdr *msg, int cc, void *addr, struct timeval *tv)
 	ip = (struct iphdr *)buf;
 	hlen = ip->ihl*4;
 	if (cc < hlen + 8 || ip->ihl < 5) {
-#if 0
-		if (options & F_VERBOSE)
-			fprintf(stderr, "ping: packet too short (%d bytes) from %s\n", cc,
-				pr_addr(from->sin_addr.s_addr));
-#endif
 		return 1;
 	}
 
@@ -444,15 +440,6 @@ parse_reply(struct msghdr *msg, int cc, void *addr, struct timeval *tv)
 					}
 				}
 				nerrors+=error_pkt;
-#if 0
-				if (options&F_QUIET)
-					return !error_pkt;
-				if (options & F_FLOOD) {
-					if (error_pkt)
-						write(STDOUT_FILENO, "\bE", 2);
-					return !error_pkt;
-				}
-#endif
 				print_timestamp();
 				printf("From %s: icmp_seq=%u ",
 				       pr_addr(from->sin_addr.s_addr),
@@ -466,22 +453,6 @@ parse_reply(struct msghdr *msg, int cc, void *addr, struct timeval *tv)
 			/* MUST NOT */
 			break;
 		}
-#if 0
-		if ((options & F_FLOOD) && !(options & (F_VERBOSE|F_QUIET))) {
-			if (!csfailed)
-				write(STDOUT_FILENO, "!E", 2);
-			else
-				write(STDOUT_FILENO, "!EC", 3);
-			return 0;
-		}
-		if (!(options & F_VERBOSE) || uid)
-			return 0;
-		if (options & F_PTIMEOFDAY) {
-			struct timeval recv_time;
-			gettimeofday(&recv_time, NULL);
-			printf("%lu.%06lu ", (unsigned long)recv_time.tv_sec, (unsigned long)recv_time.tv_usec);
-		}
-#endif
 		printf("From %s: ", pr_addr(from->sin_addr.s_addr));
 		if (csfailed) {
 			printf("(BAD CHECKSUM)\n");
@@ -491,21 +462,8 @@ parse_reply(struct msghdr *msg, int cc, void *addr, struct timeval *tv)
 		return 0;
 	}
 
-#if 0
-
-	if (!(options & F_FLOOD)) {
-		pr_options(buf + sizeof(struct iphdr), hlen);
-
-		if (options & F_AUDIBLE)
-			putchar('\a');
-		putchar('\n');
-		fflush(stdout);
-	} else
-#endif
-	 {
-		putchar('\a');
-		fflush(stdout);
-	}
+	putchar('\a');
+	fflush(stdout);
 	return 0;
 }
 
@@ -579,17 +537,9 @@ void pr_icmph(__u8 type, __u8 code, __u32 info, struct icmphdr *icp)
 			printf("Dest Unreachable, Bad Code: %d\n", code);
 			break;
 		}
-#if 0
-		if (icp && (options & F_VERBOSE))
-			pr_iph((struct iphdr*)(icp + 1));
-#endif
 		break;
 	case ICMP_SOURCE_QUENCH:
 		printf("Source Quench\n");
-#if 0
-		if (icp && (options & F_VERBOSE))
-			pr_iph((struct iphdr*)(icp + 1));
-#endif
 		break;
 	case ICMP_REDIRECT:
 		switch(code) {
