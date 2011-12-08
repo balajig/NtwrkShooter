@@ -98,11 +98,10 @@ static struct {
 	   {0, }};
 int cmsg_len;
 
-struct sockaddr_in source;
 char *device;
 int pmtudisc = -1;
 
-int ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info *device);
+int ping_start (struct sockaddr_in where, struct if_info *device);
 
 
 struct sockaddr_in whereto;
@@ -110,7 +109,8 @@ struct sockaddr_in whereto;
 int ping_me (struct in_addr ip_addr)
 {
 	struct sockaddr_in where;
-	struct sockaddr_in source;
+
+	memset (&cur_time, 0, sizeof(cur_time));
 
 	exiting = 0;
 	ntransmitted  = 0;
@@ -118,11 +118,12 @@ int ping_me (struct in_addr ip_addr)
 	nrepeats = 0;
 	nerrors = 0;
 	nchecksum = 0;
-	
+
+	gettimeofday(&start_time, NULL);
 	where.sin_family = AF_INET;
 	where.sin_addr.s_addr = ip_addr.s_addr;
-	source.sin_addr.s_addr = inet_addr ("10.10.10.173");
-	ping_start (where, source, NULL);
+
+	ping_start (where, NULL);
 	return 0;
 }
 
@@ -156,6 +157,8 @@ int setup_icmp_sock (void)
 	sock_setbufs(icmp_sock, hold);
 
 	setup(icmp_sock);
+
+	return 0;
 }
 
 int ping_setup (void)
@@ -165,13 +168,11 @@ int ping_setup (void)
 
 
 int
-ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info *device)
+ping_start (struct sockaddr_in where, struct if_info *device)
 {
 	int rval  = -1;
 	int packlen;
 	u_char *packet;
-
-	source.sin_family = AF_INET;
 
 	if (device) {
 		struct ifreq ifr;
@@ -219,6 +220,8 @@ ping_start (struct sockaddr_in where, struct sockaddr_in source, struct if_info 
 	printf("%d(%d) bytes of data.\n", datalen, datalen+8+20);
 
 	rval = main_loop(icmp_sock, packet, packlen);
+
+	fflush (stdout);
 
 	free (packet);
 
@@ -761,6 +764,7 @@ void pr_options(unsigned char * cp, int hlen)
 }
 
 
+#if 0
 /*
  * pr_iph --
  *	Print an IP header with options.
@@ -784,6 +788,7 @@ void pr_iph(struct iphdr *ip)
 	printf("\n");
 	pr_options(cp, hlen);
 }
+#endif
 
 /*
  * pr_addr --

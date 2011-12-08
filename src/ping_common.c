@@ -5,7 +5,6 @@
 
 int mark;
 int sndbuf;
-int ttl;
 int rtt;
 int rtt_addend;
 __u16 acked;
@@ -96,7 +95,9 @@ static void fill(char *patp)
 
 static void sigexit(int signo)
 {
+	/*
 	exiting = 1;
+	*/
 }
 
 static void sigstatus(int signo)
@@ -330,11 +331,7 @@ void setup(int icmp_sock)
 
 	ident = htons(getpid() & 0xFFFF);
 
-	set_signal(SIGINT, sigexit);
 	set_signal(SIGALRM, sigexit);
-	set_signal(SIGQUIT, sigstatus);
-
-	gettimeofday(&start_time, NULL);
 
 	if (deadline) {
 		struct itimerval it;

@@ -88,12 +88,18 @@ int check_ns_state (void)
 	
 	while (idx < ns_count) {
 
+		nts_debug ("Checking NAME server \"%s\" is alive or not .......", 
+				inet_ntoa((name_servers + idx)->namesrv_ip));
+
 		if (ping_me ((name_servers + idx)->namesrv_ip) < 0) {
 
 			nts_debug ("Name server \"%s\" not responding .......", 
 					inet_ntoa((name_servers + idx)->namesrv_ip));
 			no_resp++;
 		}
+		nts_debug ("Name server \"%s\" is ALIVE :) .......\n", 
+				inet_ntoa((name_servers + idx)->namesrv_ip));
+
 		idx++;	
 	}
 
