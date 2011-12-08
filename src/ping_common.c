@@ -701,8 +701,7 @@ void status(void)
 
 	fprintf(stderr, "\r%ld/%ld packets, %d%% loss", ntransmitted, nreceived, loss);
 
-#if 0
-	if (nreceived && timing) {
+	if (nreceived) {
 		tavg = tsum / (nreceived + nrepeats);
 
 		fprintf(stderr, ", min/avg/ewma/max = %ld.%03ld/%lu.%03ld/%d.%03d/%ld.%03ld ms",
@@ -712,6 +711,5 @@ void status(void)
 		       (long)tmax/1000, (long)tmax%1000
 		       );
 	}
-#endif
 	fprintf(stderr, "\n");
 }

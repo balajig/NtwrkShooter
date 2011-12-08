@@ -38,7 +38,7 @@ void show_usage (void)
 int main (int argc, char **argv)
 {
 	int options = 0;
-	struct if_info    *p = NULL;
+	struct if_info    *p = NULL, *tmp = NULL;
 
 	set_program_name (argv[0]);
 	setlocale (LC_ALL, "");
@@ -71,12 +71,17 @@ int main (int argc, char **argv)
 	}
 
 	while ((p = get_next_if_info (p))) {
+		if (tmp) {
+			free (tmp);
+			tmp = NULL;
+		}
 		if (!p->admin_state &&  !p->oper_state) {
 			if (make_if_up (p)  < 0) {
 				/*Unable to make the interface up*/
 				/*Del this interface from the list*/
 				list_del (&p->nxt_if);
 				nts_debug ("Unable to bring the Interface \"%s\" UP \n", p->if_name);
+				tmp = p;
 			}
 		}
 	}
