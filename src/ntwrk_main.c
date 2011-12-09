@@ -100,7 +100,6 @@ int main (int argc, char **argv)
 	rtnl_init();
 
 	if (resolver_init () < 0) {
-		fprintf (stderr, "\033[32mNTS : \033[0m\033[31mUnable to Read NAME SERVER INFO \033[0m\n");
 		return -1;
 	}
 

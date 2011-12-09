@@ -223,6 +223,11 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 
 	fflush (stdout);
 
+	if (nreceived < ntransmitted) {
+		fprintf (stderr, "\033[32mNTS : \033[0m\033[31m Packet loss : %d%% .... \033[0m\n", 
+			 nreceived ? ((nreceived * 100) / ntransmitted): 100);
+	}
+
 	free (packet);
 
 	return rval;

@@ -127,6 +127,8 @@ int resolver_init (void)
 	memset (name_servers, 0, alloc_len);
 
 	if (read_resolve_conf () < 0) {
+		if (!ns_count)
+			fprintf (stderr, "\033[32mNTS : \033[0m\033[31mName Servers not configured .... \033[0m\n");
 		free (name_servers);
 		return -1;
 	}

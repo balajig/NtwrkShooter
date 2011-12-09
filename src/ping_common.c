@@ -492,8 +492,7 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 			 * and return to pinger. */
 		}
 	}
-	finish();
-	return 0;
+	return finish();
 }
 
 int gather_statistics(__u8 *icmph, int icmplen,
@@ -685,6 +684,9 @@ int finish(void)
 		       comma, ipg/1000, ipg%1000, rtt/8000, (rtt/8)%1000);
 	}
 	putchar('\n');
+	if (ntransmitted) 
+		if (!nreceived)
+			return -1;
 	return 0;
 }
 
