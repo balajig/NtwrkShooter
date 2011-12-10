@@ -88,7 +88,7 @@ struct rt_info {
 	unsigned char flags;
 	struct in_addr nexthop;
 	struct if_info *ifname;
-        struct list_head  rt_list; //FIXME - Need to think about a better way probably a hash method to lookup instead of lists. 
+        struct hlist_head  rt_list; //FIXME - Need to think about a better way probably a hash method to lookup instead of lists. 
 };
 
 struct if_info * get_next_if_info (struct if_info *p);
