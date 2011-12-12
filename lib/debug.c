@@ -16,7 +16,7 @@
 #define DEBUG_ENABLED    1
 
 
-static int nts_dbg = DEBUG_DISABLED;
+static int nts_dbg = DEBUG_ENABLED;
 
 void set_debug_enable (void)
 {

@@ -10,6 +10,7 @@
 
 #include "nt.h"
 
+#define MAX_HOST                5
 #define MAX_NAME_SERVERS	3
 #define RESOLVE_CONF_FILE	"/etc/resolv.conf"
 
@@ -109,6 +110,30 @@ int check_ns_state (void)
 		return -1;
 	}
 	/*Name servers are UP*/
+	return 0;
+}
+
+int try_to_resolve_host (void)
+{
+	const char *host[MAX_HOST] = {
+				      "yahoo.com", "google.com", 
+				      "msn.com", "wikipedia.org", 
+				      "github.com"
+				     };
+
+	int i = 0;
+
+	while (i < MAX_HOST) {
+
+		nts_debug ("Trying resolve host \"%s\" .......",  host[i]);
+		if (resolve_hostname (host[i]) < 0) {
+			nts_debug ("Unable resolve host \"%s\" ....... :(",  host[i]);
+		} else
+			nts_debug ("Wow  host \"%s\" is resolved :) .......\n", host[i]);
+
+		i++;
+	}
+
 	return 0;
 }
 
