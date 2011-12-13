@@ -123,8 +123,7 @@ int ping_me (struct in_addr ip_addr)
 	where.sin_family = AF_INET;
 	where.sin_addr.s_addr = ip_addr.s_addr;
 
-	ping_start (where, NULL);
-	return 0;
+	return ping_start (where, NULL);
 }
 
 
@@ -225,7 +224,7 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 
 	if (nreceived < ntransmitted) {
 		fprintf (stderr, "\033[32mNTS : \033[0m\033[31m Packet loss : %d%% .... \033[0m\n", 
-			 nreceived ? ((nreceived * 100) / ntransmitted): 100);
+			 nreceived ? (((ntransmitted - nreceived) * 100) / ntransmitted): 100);
 	}
 
 	free (packet);

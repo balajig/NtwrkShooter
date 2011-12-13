@@ -370,7 +370,7 @@ int  main_loop(int icmp_sock, __u8 *packet, int packlen)
 		/* Check exit conditions. */
 		if (exiting)
 			break;
-		if (npackets && nreceived + nerrors >= npackets)
+		if (ntransmitted == npackets)
 			break;
 		if (deadline && nerrors)
 			break;
@@ -639,9 +639,6 @@ int finish(void)
 
 	tvsub(&tv, &start_time);
 
-	putchar('\n');
-	fflush(stdout);
-	printf("--- ping statistics ---\n");
 	printf("%ld packets transmitted, ", ntransmitted);
 	printf("%ld received", nreceived);
 	if (nrepeats)

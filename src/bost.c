@@ -62,7 +62,7 @@ void check_host( const char *host )
 	hints.ai_socktype = SOCK_STREAM; /* Not sure why */
 
 	if( !ip_range_check )
-		printf( "%s:\n", host );
+		printf( "\n\n%s:\n", host );
 
 	if( getaddrinfo( host, NULL, &hints, &hostinfo ) != 0 )
 	{
@@ -79,20 +79,31 @@ void check_host( const char *host )
 					inet_ntop( AF_INET,
 							&(( struct sockaddr_in *) iter->ai_addr)->sin_addr,
 							addr, INET_ADDRSTRLEN );
+					printf( "\n\t%d: %s\n", hosts, addr );
+					fflush (stdout);
+
+					nts_debug ("Checking host \"%s\" Resolved IP is reachable......", host, addr);
+
+					if (ping_me ((( struct sockaddr_in *) iter->ai_addr)->sin_addr) < 0) {
+						nts_debug ("Host \"%s\" is NOT responding \"%s\" :( .......\n",host);
+					} else 
+						nts_debug ("Host \"%s\" is responding \"%s\" :) .......\n",host);
+
 					break;
 				case AF_INET6: /* IPv6 */
 					inet_ntop( AF_INET6,
 							&(( struct sockaddr_in6 *) iter->ai_addr)->sin6_addr,
 							addr, INET6_ADDRSTRLEN );
+
+					printf( "\t%d: %s\n", hosts, addr );
 					break;
 				default: /* Unknown */
 					strncpy( addr, "unknown network family\0", 50 );
 					break;
 			}
 
-			printf( "\t%d: %s\n", hosts, addr );
 
-			if( double_check )
+			if( !double_check )
 			{
 				if( strncmp( "unknown", addr, 7 ) != 0 )
 					check_sub_ip( addr );
