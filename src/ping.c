@@ -100,6 +100,8 @@ int cmsg_len;
 
 char *device;
 int pmtudisc = -1;
+static u_char *packet;
+static int packlen;
 
 int ping_start (struct sockaddr_in where, struct if_info *device);
 
@@ -111,6 +113,7 @@ int ping_me (struct in_addr ip_addr)
 	struct sockaddr_in where;
 
 	memset (&cur_time, 0, sizeof(cur_time));
+	memset (packet,  0, packlen);
 
 	exiting = 0;
 	ntransmitted  = 0;
@@ -162,6 +165,14 @@ int setup_icmp_sock (void)
 
 int ping_setup (void)
 {
+
+	packlen = datalen + MAXIPLEN + MAXICMPLEN;
+
+	if (!(packet = (u_char *)malloc((u_int)packlen))) {
+		fprintf(stderr, "ping: out of memory.\n");
+		return -1;
+	}
+
 	return setup_icmp_sock ();	
 }
 
@@ -170,8 +181,6 @@ int
 ping_start (struct sockaddr_in where, struct if_info *device)
 {
 	int rval  = -1;
-	int packlen;
-	u_char *packet;
 
 	if (device) {
 		struct ifreq ifr;
@@ -198,22 +207,6 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 	}
 
 
-	if (datalen > 0xFFFF - 8 - 20) {
-		if (uid || datalen > sizeof(outpack)-8) {
-			fprintf(stderr, "Error: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20);
-			exit(2);
-		}
-		/* Allow small oversize to root yet. It will cause EMSGSIZE. */
-		fprintf(stderr, "WARNING: packet size %d is too large. Maximum is %d\n", datalen, 0xFFFF-8-20);
-	}
-
-	packlen = datalen + MAXIPLEN + MAXICMPLEN;
-
-	if (!(packet = (u_char *)malloc((u_int)packlen))) {
-		fprintf(stderr, "ping: out of memory.\n");
-		exit(2);
-	}
-
 	printf("PING  %s ", inet_ntoa(whereto.sin_addr));
 
 	printf("%d(%d) bytes of data.\n", datalen, datalen+8+20);
@@ -226,8 +219,6 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 		fprintf (stderr, "\033[32mNTS : \033[0m\033[31m Packet loss : %d%% .... \033[0m\n", 
 			 nreceived ? (((ntransmitted - nreceived) * 100) / ntransmitted): 100);
 	}
-
-	free (packet);
 
 	return rval;
 }
