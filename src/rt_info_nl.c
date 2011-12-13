@@ -12,12 +12,12 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
-#define RT_NL_DEBUG 1
+#define RT_NL_DEBUG 
 
 static struct sockaddr_nl snl;
 static int sock;
 
-static struct rt_info *rtinfo;
+static LIST_HEAD(rt_info_list);
 
 static int rt_sock_create(void)
 {
@@ -84,38 +84,33 @@ static int rt_table_read_req(int family)
 	    fprintf (stderr, "sendto failed: %s",strerror (errno));
 	    return -1;
 	  }
-#ifdef RT_NL_DEBUG
-	fprintf(stdout,"NLink Message sent \n");
-#endif
 	return 0;
 }
 
-
-static int populate_rt_info(struct prefix *p,  struct in_addr nh,
+static int create_rt_info(struct prefix *p,  struct in_addr nh,
 			    struct in_addr src, unsigned int ifindex,
 			    unsigned int metric)
 {
-#ifdef RT_NL_DEBUG
-        fprintf(stdout,"Response Details \n");
-	fprintf(stdout,"Prefix: %s\n",inet_ntoa(p->u.prefix4));
-#ifdef HAVE_IPV6
-	fprintf(stdout,"Prefix: %s",inet_ntoa(p->u.prefix6));
-#endif
-	fprintf(stdout,"Gateway: %s\n",inet_ntoa(nh));
-	fprintf(stdout,"Source: %s\n",inet_ntoa(src));
-	fprintf(stdout,"Metric: %d\n",metric);
-	fprintf(stdout,"Ifindex: %d\n",ifindex);
-	fprintf(stdout,"\n");
-#endif
-	return 0;
+ 	struct route_info *rt_info;
+	struct if_info *ifinfo;
+	rt_info = calloc(1,sizeof(struct route_info));
 
+	if(rt_info) {
+	  rt_info->distance = metric;
+	  rt_info->nexthop = nh;
+	  rt_info->p = p;
+	  rt_info->src = src;
+	if(ifinfo = (get_if((void*)ifindex, GET_IF_BY_IFINDEX)))
+		rt_info->ifinfo = ifinfo;
+	list_add_tail (&rt_info->rt_list, &rt_info_list);
+	}
+	return 0;
 }
 
 static void netlink_parse_rtattr (struct rtattr **tb, int max, 
 				  struct rtattr *rta, int len)
 {
-      while (RTA_OK (rta, len))
-      {
+      while (RTA_OK (rta, len)) {
 	if (rta->rta_type <= max)
 	  tb[rta->rta_type] = rta;
 	rta = RTA_NEXT (rta, len);
@@ -124,7 +119,6 @@ static void netlink_parse_rtattr (struct rtattr **tb, int max,
 
 static int flush_rt_table(struct nlmsghdr *h)
 {
-
       int len;
       struct rtmsg *rtm;
       struct rtattr *tb[RTA_MAX + 1];
@@ -176,8 +170,7 @@ static int flush_rt_table(struct nlmsghdr *h)
       if (tb[RTA_PRIORITY])
 	metric = *(int *) RTA_DATA(tb[RTA_PRIORITY]);
 
-      if (rtm->rtm_family == AF_INET)
-      {
+      if (rtm->rtm_family == AF_INET) {
 	  struct prefix p;
 	  p.family = AF_INET;
 	  memcpy (&p.u.prefix4, dest, 4);
@@ -186,11 +179,10 @@ static int flush_rt_table(struct nlmsghdr *h)
          /*
 	  * Store the info into the local structure
 	  */
-	 populate_rt_info(&p, gate, src, index, metric);
+	 create_rt_info(&p, gate, src, index, metric);
       }
 #ifdef HAVE_IPV6
-      if (rtm->rtm_family == AF_INET6)
-      {
+      if (rtm->rtm_family == AF_INET6) {
 	  struct prefix p;
 	  p.family = AF_INET6;
 	  memcpy (&p.u.prefix, dest, 16);
@@ -205,6 +197,26 @@ static int flush_rt_table(struct nlmsghdr *h)
       return 0;
 }
 
+
+void dump_rt_table(void)
+{
+  	struct route_info *info;
+	struct list_head *h = &rt_info_list;
+
+	list_for_each_entry(info, h, rt_list){
+#ifdef RT_NL_DEBUG
+	    fprintf(stdout,"Prefix IPv4: %s\n",inet_ntoa(info->p->u.prefix4));
+#ifdef HAVE_IPV6
+	    fprintf(stdout,"Prefix IPv6: %s",inet_ntoa(info->p->u.prefix6));
+#endif
+	    fprintf(stdout,"Gateway: %s\n",inet_ntoa(info->nexthop));
+	    fprintf(stdout,"Source: %s\n",inet_ntoa(info->src));
+	    fprintf(stdout,"Metric: %d\n",info->distance);
+	    fprintf(stdout,"Interface: %s\n",info->ifinfo->if_name);
+	    fprintf(stdout,"\n");
+#endif
+	}
+}
 
 int parse_response(void)
 {
@@ -289,8 +301,10 @@ int rtnl_init(void)
   	rt_sock_create();
 	rt_table_read_req(AF_INET);
 	parse_response();
+#ifdef RT_NL_DEBUG
+	dump_rt_table();
+#endif
 	return 0;
-
 }
 
 

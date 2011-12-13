@@ -75,21 +75,22 @@ struct prefix {
 
 /**
  *	struct rt_info - route information structure
+ *      @rt_list: list of all route information 
  * 	@p: pointer to struct prefix
  * 	@distance: admin distance for the route
  * 	@flags: Denotes the flag for the route
  * 	@nexthop: nexthop address
  *	@ifname: interface name
- *      @rt_list: list of all route information 
  */
-struct rt_info {
+struct route_info {
+        struct list_head  rt_list; 
 	struct prefix *p;
 	unsigned char distance;	
 	unsigned char flags;
 	struct in_addr nexthop;
-	struct if_info *ifname;
-        struct hlist_head  rt_list; //FIXME - Need to think about a better way probably a hash method to lookup instead of lists. 
-};
+	struct in_addr src;
+	struct if_info *ifinfo;
+} __attribute__((__packed__));
 
 struct if_info * get_next_if_info (struct if_info *p);
 int make_if_up (struct if_info *p);
