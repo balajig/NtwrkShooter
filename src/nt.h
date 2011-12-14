@@ -110,5 +110,9 @@ int resolver_init (void);
 int ping_me (struct in_addr );
 int check_ns_state (void);
 int resolve_hostname (const char *hostname);
+int ping_setup (void);
+int try_to_resolve_host (void);
+struct if_info * get_if (void *key, uint8_t key_type);
+
 
 #endif  /* NT_H */

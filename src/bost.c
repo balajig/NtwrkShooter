@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <math.h>
+#include "nt.h"
 
 void check_host( const char *host );
 int is_ip( const char *host );

@@ -100,7 +100,7 @@ static int create_rt_info(struct prefix *p,  struct in_addr nh,
 	  rt_info->nexthop = nh;
 	  rt_info->p = p;
 	  rt_info->src = src;
-	if(ifinfo = (get_if((void*)ifindex, GET_IF_BY_IFINDEX)))
+	if((ifinfo = (get_if((void*)ifindex, GET_IF_BY_IFINDEX))))
 		rt_info->ifinfo = ifinfo;
 	list_add_tail (&rt_info->rt_list, &rt_info_list);
 	}

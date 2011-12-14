@@ -86,8 +86,6 @@ int maxpacket = sizeof(outpack);
 static int broadcast_pings = 0;
 
 static char *pr_addr(__u32);
-static void pr_options(unsigned char * cp, int hlen);
-static void pr_iph(struct iphdr *ip);
 static u_short in_cksum(const u_short *addr, int len, u_short salt);
 static void pr_icmph(__u8 type, __u8 code, __u32 info, struct icmphdr *icp);
 
@@ -216,7 +214,7 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 	fflush (stdout);
 
 	if (nreceived < ntransmitted) {
-		fprintf (stderr, "\033[32mNTS : \033[0m\033[31m Packet loss : %d%% .... \033[0m\n", 
+		fprintf (stderr, "\033[32mNTS : \033[0m\033[31m Packet loss : %ld%% .... \033[0m\n", 
 			 nreceived ? (((ntransmitted - nreceived) * 100) / ntransmitted): 100);
 	}
 
@@ -611,6 +609,7 @@ void pr_icmph(__u8 type, __u8 code, __u32 info, struct icmphdr *icp)
 	}
 }
 
+#if 0
 void pr_options(unsigned char * cp, int hlen)
 {
 	int i, j;
@@ -759,7 +758,6 @@ void pr_options(unsigned char * cp, int hlen)
 }
 
 
-#if 0
 /*
  * pr_iph --
  *	Print an IP header with options.

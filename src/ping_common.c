@@ -60,6 +60,8 @@ static int screen_width = INT_MAX;
 /* Fills all the outpack, excluding ICMP header, but _including_
  * timestamp area with supplied pattern.
  */
+
+#if 0
 static void fill(char *patp)
 {
 	int ii, jj, kk;
@@ -92,6 +94,7 @@ static void fill(char *patp)
 		printf("\n");
 	}
 }
+#endif
 
 static void sigexit(int signo)
 {
@@ -99,12 +102,6 @@ static void sigexit(int signo)
 	exiting = 1;
 	*/
 }
-
-static void sigstatus(int signo)
-{
-	status_snapshot = 1;
-}
-
 
 int __schedule_exit(int next)
 {
@@ -501,7 +498,9 @@ int gather_statistics(__u8 *icmph, int icmplen,
 		      void (*pr_reply)(__u8 *icmph, int cc))
 {
 	int dupflag = 0;
+#if 0
 	long triptime = 0;
+#endif
 	__u8 *ptr = icmph + icmplen;
 
 	++nreceived;
@@ -654,8 +653,8 @@ int finish(void)
 		printf(", time %ldms", 1000*tv.tv_sec+tv.tv_usec/1000);
 	}
 	putchar('\n');
-#if 0
-	if (nreceived && timing) {
+
+	if (nreceived) {
 		long tmdev;
 
 		tsum /= nreceived + nrepeats;
@@ -670,7 +669,6 @@ int finish(void)
 		       );
 		comma = ", ";
 	}
-#endif
 	if (pipesize > 1) {
 		printf("%spipe %d", comma, pipesize);
 		comma = ", ";

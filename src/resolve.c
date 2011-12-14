@@ -67,21 +67,6 @@ static int read_resolve_conf (void)
 	return 0;
 }
 
-/* Return the ip address if host provided by name
- * Sasi: I Hope it is not required for reading namesevers ?*/
-
-static char * to_ip_addr (char * addr)
-{
-	struct hostent * host = NULL;
-
-	host = gethostbyname(addr);
-
-	if (host)
-		return inet_ntoa(*(struct in_addr *)host->h_addr);
-	else
-		return NULL;
-}
-
 int check_ns_state (void) 
 {
 	int idx = 0;
