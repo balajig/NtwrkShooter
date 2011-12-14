@@ -198,7 +198,7 @@ static int flush_rt_table(struct nlmsghdr *h)
 }
 
 
-void dump_rt_table(void)
+static void dump_rt_table(void)
 {
   	struct route_info *info;
 	struct list_head *h = &rt_info_list;
@@ -216,6 +216,18 @@ void dump_rt_table(void)
 	    fprintf(stdout,"\n");
 #endif
 	}
+}
+
+struct route_info* lookup_rt_info(struct in_addr addr)
+{
+  	struct route_info *info;
+	struct list_head *h = &rt_info_list;
+
+	list_for_each_entry(info, h, rt_list) {
+	  if(info->p->u.prefix4.s_addr == addr.s_addr) 
+	    return info;
+	}
+	return NULL;
 }
 
 int parse_response(void)
