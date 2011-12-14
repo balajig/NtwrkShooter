@@ -92,6 +92,13 @@ struct route_info {
 	struct if_info *ifinfo;
 } __attribute__((__packed__));
 
+struct user_config {
+	char		usr_ifname[IFNAMSIZ];
+	struct in_addr	usr_ipv4_address;
+};
+
+
+
 struct if_info * get_next_if_info (struct if_info *p);
 int make_if_up (struct if_info *p);
 void display_interface_info (void);
@@ -102,5 +109,6 @@ void set_debug_enable (void);
 int resolver_init (void);
 int ping_me (struct in_addr );
 int check_ns_state (void);
+int resolve_hostname (const char *hostname);
 
 #endif  /* NT_H */

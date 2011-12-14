@@ -12,6 +12,7 @@
 
 #define VERSION  "0.1"
 
+struct user_config usrconf;
 
 void show_license (void)
 {
@@ -28,11 +29,13 @@ void show_version (void)
 
 void show_usage (void)
 {
-	fprintf (stdout, "Usage: nshooter [OPTION]\n");
 	fprintf (stdout, "Troubleshoots the network and reports problem\n");
+	fprintf (stdout, "Usage: nshooter [-dh] [-I interface] [-N NameServerIP]\n");
 	fprintf (stdout, "Options:\n");
 	fprintf (stdout, "-d,                   Enables debugging mode\n");
 	fprintf (stdout, "-h,                   Displays help message\n");
+	fprintf (stdout, "-N,                   Name Server to configure \n");
+	fprintf (stdout, "-I,                   Interface to connect to Network\n");
 }
 
 int main (int argc, char **argv)
@@ -49,7 +52,7 @@ int main (int argc, char **argv)
 
 	/*TODO: Need to figure out the command line options*/
 
-	while ((options = getopt(argc, argv, "dh")) != -1) {
+	while ((options = getopt(argc, argv, "dhN:I:")) != -1) {
 		switch (options) {
 			case 'd':
 				fprintf (stderr, "NTS: Debugging Mode enabled\n\n");
@@ -58,6 +61,14 @@ int main (int argc, char **argv)
 			case 'h':
 				show_usage ();
 				exit (1);
+				break;
+			case 'N':
+				usrconf.usr_ipv4_address.s_addr = inet_addr(optarg);
+				fprintf (stderr, "NameServer to configure : %x\n", usrconf.usr_ipv4_address.s_addr);
+				break;
+			case 'I':
+				memcpy (usrconf.usr_ifname, optarg, IFNAMSIZ);
+				fprintf (stderr, "Interface to configure : %s\n", usrconf.usr_ifname);
 				break;
 			default: 
 				fprintf (stderr, "Invalid Option\n");
