@@ -13,6 +13,8 @@
 
 #define _PATH_PROCNET_DEV "/proc/net/dev"
 
+extern struct user_config usrconf;
+
 
 LIST_HEAD(if_hd);
 
@@ -129,6 +131,10 @@ static int if_readlist_proc(char *target)
 		/*Ignore loopback interface*/
 		if (!strncmp (name, "lo", strlen ("lo"))) {
 			nts_debug ("loopback interface \"%s\" ignored", name);
+			continue;
+		}
+		/*Process only user mentioned interface*/
+		if (usrconf.usr_ifname[0] && strncmp (name, usrconf.usr_ifname, IFNAMSIZ)) {
 			continue;
 		}
 		nts_debug ("\"%s\" interface added successfully to IF table", name);
