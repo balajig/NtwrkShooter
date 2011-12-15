@@ -62,6 +62,7 @@ char copyright[] =
 
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+#include "nt.h"
 
 #ifndef ICMP_FILTER
 #define ICMP_FILTER	1
@@ -70,6 +71,7 @@ struct icmp_filter {
 };
 #endif
 
+extern struct user_config usrconf;
 
 #define	MAXIPLEN	60
 #define	MAXICMPLEN	76
@@ -124,7 +126,7 @@ int ping_me (struct in_addr ip_addr)
 	where.sin_family = AF_INET;
 	where.sin_addr.s_addr = ip_addr.s_addr;
 
-	return ping_start (where, NULL);
+	return ping_start (where, usrconf.usr_ifname[0]? get_if(usrconf.usr_ifname, GET_IF_BY_NAME): NULL);
 }
 
 
@@ -181,15 +183,7 @@ ping_start (struct sockaddr_in where, struct if_info *device)
 	int rval  = -1;
 
 	if (device) {
-		struct ifreq ifr;
-
-		memset(&ifr, 0, sizeof(ifr));
-		strncpy(ifr.ifr_name, device->if_name, IFNAMSIZ-1);
-		if (ioctl(icmp_sock, SIOCGIFINDEX, &ifr) < 0) {
-			fprintf(stderr, "ping: unknown iface %s\n", device->if_name);
-			exit(2);
-		}
-		cmsg.ipi.ipi_ifindex = ifr.ifr_ifindex;
+		cmsg.ipi.ipi_ifindex = device->if_idx;
 		cmsg_len = sizeof(cmsg);
 	}
 

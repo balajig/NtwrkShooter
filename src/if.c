@@ -240,7 +240,9 @@ struct if_info * get_next_if_info (struct if_info *p)
 	if (!p) {
 		/*if p is NULL , get the first entry in the list*/
 		nxt = &if_hd;
-		nxtif = list_first_entry (nxt, struct if_info, nxt_if);
+		if (!list_empty (nxt)) {
+			nxtif = list_first_entry (nxt, struct if_info, nxt_if);
+		}
 
 	} else {
 		nxt = &p->nxt_if;

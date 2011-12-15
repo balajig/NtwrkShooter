@@ -91,18 +91,22 @@ static int create_rt_info(struct prefix *p,  struct in_addr nh,
 			    struct in_addr src, unsigned int ifindex,
 			    unsigned int metric)
 {
- 	struct route_info *rt_info;
+	struct route_info *rt_info;
 	struct if_info *ifinfo;
 	rt_info = calloc(1,sizeof(struct route_info));
 
 	if(rt_info) {
-	  rt_info->distance = metric;
-	  rt_info->nexthop = nh;
-	  rt_info->p = p;
-	  rt_info->src = src;
-	if((ifinfo = (get_if((void*)ifindex, GET_IF_BY_IFINDEX))))
-		rt_info->ifinfo = ifinfo;
-	list_add_tail (&rt_info->rt_list, &rt_info_list);
+		rt_info->distance = metric;
+		rt_info->nexthop = nh;
+		rt_info->p = p;
+		rt_info->src = src;
+		if((ifinfo = (get_if((void*)ifindex, GET_IF_BY_IFINDEX))))
+			rt_info->ifinfo = ifinfo;
+		else  {
+			free (rt_info);
+			return 0;
+		}
+		list_add_tail (&rt_info->rt_list, &rt_info_list);
 	}
 	return 0;
 }
