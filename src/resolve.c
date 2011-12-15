@@ -82,9 +82,9 @@ int check_ns_state (void)
 			nts_debug ("Name server \"%s\" not responding .......", 
 					inet_ntoa((name_servers + idx)->namesrv_ip));
 			no_resp++;
-		}
-		nts_debug ("Name server \"%s\" is ALIVE :) .......\n", 
-				inet_ntoa((name_servers + idx)->namesrv_ip));
+		} else 
+			nts_debug ("Name server \"%s\" is ALIVE :) .......\n", 
+					inet_ntoa((name_servers + idx)->namesrv_ip));
 
 		idx++;	
 	}
