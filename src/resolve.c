@@ -89,11 +89,20 @@ int check_ns_state (void)
 		idx++;	
 	}
 
-	/*name servers not responding*/	
-	if (no_resp == ns_count) {
-		/*XXX:Why can't we try for public DNS servers? */
+	/*Sometimes default gateways acts as an DNS server, 
+          some default gateways will not respond to ping*/
+
+	if (try_to_resolve_host () < 0) {
+		/*name servers not responding*/	
+		if (no_resp == ns_count) {
+			/*XXX:Why can't we try for public DNS servers? */
+			fprintf (stderr, "\033[32mNTS : \033[0m\033[31mNameServers configured are down \033[0m\n");
+		} else {
+			fprintf (stderr, "\033[32mNTS : \033[0m\033[31mHostname lookup failed \033[0m\n");	
+		}
 		return -1;
 	}
+
 	/*Name servers are UP*/
 	return 0;
 }
@@ -106,20 +115,22 @@ int try_to_resolve_host (void)
 				      "github.com"
 				     };
 
-	int i = 0;
+	int i = 0, resolved = -1;
 
 	while (i < MAX_HOST) {
 
 		nts_debug ("Trying resolve host \"%s\" .......",  host[i]);
 		if (resolve_hostname (host[i]) < 0) {
 			nts_debug ("Unable resolve host \"%s\" ....... :(",  host[i]);
-		} else
+		} else {
+			resolved = 1;
 			nts_debug ("Wow  host \"%s\" is resolved :) .......\n", host[i]);
+		}
 
 		i++;
 	}
 
-	return 0;
+	return resolved;
 }
 
 
